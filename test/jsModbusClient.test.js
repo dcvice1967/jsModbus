@@ -117,11 +117,7 @@ describe("ModbusClient setup", function () {
 
       client.readInputRegister(0, 1, cb);
 
-      var res = Put()
-	         .word16be(0)  
-		 .word16be(0)
-		 .word16be(3)
-		 .word8(1)
+      var res = Put().word16be(0).word16be(0).word16be(3).word8(1) // header
 		 .word8(0x84)  // error code
 	         .word8(1)     // exception code
 		 .buffer();
@@ -146,11 +142,7 @@ describe("ModbusClient setup", function () {
 
       client.readCoils(0, 17, cb);
 
-      var res = Put()
-		.word16be(0)
-		.word16be(0)
-		.word16be(6)
-		.word8(1)
+      var res = Put().word16be(0).word16be(0).word16be(6).word8(1) // header
 		.word8(1)  // function code
 		.word8(3)  // byte count
 		.word8(85) // bits 0 - 7  = 01010101 = 85
@@ -162,7 +154,7 @@ describe("ModbusClient setup", function () {
 
     });
 
-    it('should handle a write single coil request', function (done) {
+    it('should handle a write single coil request with value false', function (done) {
 
       var cb = function (resp, err) {
         assert.ok(resp);
@@ -178,11 +170,7 @@ describe("ModbusClient setup", function () {
 
       client.writeSingleCoil(13, false, cb);
 
-      var res = Put()
-		.word16be(0)
-		.word16be(0)
-		.word16be(7)
-		.word8(1)
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1) // header
 		.word8(5)     // function code
 		.word8(4)     // byte count
 		.word16be(13) // output address
@@ -191,6 +179,32 @@ describe("ModbusClient setup", function () {
 
        onData(res);
 
+    });
+
+    it('should handle a write single coil request with value true', function (done) {
+
+      var cb = function (resp, err) {
+        assert.ok(resp);
+	assert.deepEqual(resp, {
+	  fc: 5,
+	  byteCount: 4,
+	  outputAddress: 15,
+	  outputValue: true
+        });
+
+	done();
+      };
+
+      client.writeSingleCoil(15, true, cb);
+
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)  // header
+		.word8(5)         // function code
+		.word8(4)         // byte count
+		.word16be(15)     // output address
+		.word16be(0xFF00) // on 
+		.buffer();
+
+      onData(res);
     });
 
   });
