@@ -7,15 +7,14 @@ var Put = require('put');
 var Handler = require('./jsModbusHandler');
 
 var log = function (msg) { util.log(msg); };
-var dummy = function () { };
-
-var modbusProtocolVersion = 0,
-    modbusUnitIdentifier = 1;
-
 
 exports.setLogger = function (logger) {
   log = logger;
 };
+
+var dummy = function () { },
+    modbusProtocolVersion = 0,
+    modbusUnitIdentifier = 1;
 
 var ModbusClient = function (port, host, mock) {
 
@@ -42,6 +41,7 @@ var ModbusClient = function (port, host, mock) {
   // setup data receiver
   this.client.on('data', this.handleData(this));
 
+  // package and callback queues
   this.pkgPipe = [];
   this.cbPipe = [];
 
@@ -62,9 +62,6 @@ var ModbusClient = function (port, host, mock) {
 
     readInputRegister: function (start, quantity, cb) {
 
-      // 0. check start and quantity
-
-      // 1. create pdu and response-pdu handler
       var fc      = 4, 
           pdu     = that.pduWithTwoParameter(fc, start, quantity);
 
@@ -201,6 +198,7 @@ proto.handleData = function (that) {
         continue;
       }      
 
+      // 5. handle pdu
       log("Calling Callback with pdu.");
       var handler = Handler.ResponseHandler[cbObj.fc];
       if (!handler) { 
@@ -221,6 +219,8 @@ proto.handleErrorPDU = function (pdu, cb) {
   
   var errorCode = pdu.readUInt8(0);
 
+  // if error code is smaller than 0x80
+  // the pdu describes no error
   if (errorCode < 0x80) {
     return false;
   }
@@ -235,6 +235,8 @@ proto.handleErrorPDU = function (pdu, cb) {
 	message: message
   };
   
+  // call the desired callback with
+  // err parameter set
   cb(null, err);
 
   return true; 
