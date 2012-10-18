@@ -120,7 +120,6 @@ proto.flush = function () {
     var mbap = pkgObj.pkg;
 
     log('sending data');
-    console.log(mbap);
     this.client.write(mbap);
   }
 }
