@@ -137,7 +137,7 @@ proto.flush = function () {
  */
 proto.buildPackage = function (pdu) {
   
-  var newId = this.identifier++;
+  var newId = this.identifier++ % 0xFFFF;
   var pkgObj = {
 	id : newId,
 	pkg : Put()
