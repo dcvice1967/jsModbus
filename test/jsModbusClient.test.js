@@ -99,7 +99,7 @@ describe("ModbusClient setup", function () {
 
     });
 
-    it('should handle response in a different order just fine', function (done) {
+    it('should handle responses coming in different order just fine', function (done) {
 
       var cb1 = function (resp, err) {
 
@@ -245,6 +245,32 @@ describe("ModbusClient setup", function () {
 		.buffer();
 
       onData(res);
+    });
+
+    it('should handle a write single register request', function (done) {
+
+      var cb = function (resp, err) {
+        assert.ok(resp);
+  	assert.deepEqual(resp, {
+          fc: 6,
+	  byteCount: 4,
+          registerAddress: 13,
+	  registerValue: 42
+        });
+        done();
+      };
+
+      client.writeSingleRegister(13, 42, cb);
+
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)   // header
+  		 .word8(6)      // function code
+                 .word8(4)      // byte count
+        	 .word16be(13)  // register address
+	   	 .word16be(42)  // register value
+		 .buffer();
+
+       onData(res);
+
     });
 
   });

@@ -35,9 +35,13 @@ Client example
 	  // resp will look like { fc: 1, byteCount: 1, regs: [ true, false, true ] }
 	});
 	
-	client.writeCoil(5, true, function (resp, err) {
+	client.writeSingleCoil(5, true, function (resp, err) {
 	  // resp will look like { fc: 5, byteCount: 4, outputAddress: 5, outputValue: true }
 	});
+
+  	client.writeSingleRegister(13, 42, function (resp, err) {
+	  // resp will look like { fc: 6, byteCount: 4, registerAddress: 13, registerValue: 42 }
+        });
 
 That's it for now. Feel free to fork and implement more.
 

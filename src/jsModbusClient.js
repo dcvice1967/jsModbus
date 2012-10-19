@@ -78,6 +78,13 @@ var ModbusClient = function (port, host, mock) {
 
     },
 
+    writeSingleRegister: function (address, value, cb) {
+      var fc = 6,
+          pdu = that.pduWithTwoParameter(fc, address, value);
+
+      that.makeRequest(fc, pdu, !cb?dummy:cb);
+    },
+
     close: function () {
       that.client.end();
     }
