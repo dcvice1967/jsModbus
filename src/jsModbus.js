@@ -1,5 +1,6 @@
 
 var modbusHandler = require('./jsModbusHandler'),
+    serverModule = require('./jsModbusServer'),
     clientModule = require('./jsModbusClient');
 
 exports.setLogger = function (logger) {
@@ -8,7 +9,4 @@ exports.setLogger = function (logger) {
 };
 
 exports.createClient = clientModule.create;
-
-exports.createServer = function (port, handler) {
-
-}
+exports.createServer = serverModule.create;

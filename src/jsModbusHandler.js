@@ -22,6 +22,23 @@ exports.ExceptionMessage = {
 
 };
 
+exports.FC = {
+  readCoils: 1
+}
+
+// for the server
+exports.RequestHandler = {
+
+  // ReadCoils
+  1:  function (pdu, cb) {
+        var startAddress = pdu.readUInt16BE(2),
+	    quantity = pdu.readUInt16BE(4);
+	cb(startAddress, quantity);	
+      }
+  }
+
+
+// for the client
 exports.ResponseHandler = {
     // ReadCoils
     1:	function (pdu, cb) {
