@@ -43,7 +43,7 @@ var ModbusClient = function (port, host, mock) {
 
   // package and callback queues
   this.pkgPipe = [];
-  this.cbPipe = [];
+  this.cbPipe = { };
 
   this.identifier = 0;
 
@@ -99,7 +99,7 @@ proto.makeRequest = function (fc, pdu, cb) {
       cbObj = { id: pkgObj.id, fc: fc, cb: cb };
 
   this.pkgPipe.push(pkgObj);
-  this.cbPipe.push(cbObj);
+  this.cbPipe[pkgObj.id] = cbObj;
 
   this.flush();
 
@@ -188,7 +188,8 @@ proto.handleData = function (that) {
       log("PDU extracted");
 
       // 3. dequeue callback and make the call with the pdu
-      var cbObj = that.cbPipe.shift();
+      var cbObj = that.cbPipe[mbap.transId];
+      that.cbPipe[mbap.transId] = null;
       log("Fetched Callback Object from pipe with id " + cbObj.id);
 
       // 4. check pdu for errors

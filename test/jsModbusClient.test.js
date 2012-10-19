@@ -99,6 +99,46 @@ describe("ModbusClient setup", function () {
 
     });
 
+    it('should handle response in a different order just fine', function (done) {
+
+      var cb1 = function (resp, err) {
+
+        // first request
+
+        assert.ok(resp);
+	assert.deepEqual(resp, { fc: 4, byteCount: 2, register: [ 42 ]});
+
+        done();
+      },
+      cb2 = function (resp, err) {
+
+        assert.ok(resp);
+	assert.deepEqual(resp, { fc: 4, byteCount: 2, register: [43] });	
+
+        // second request
+        
+      };
+
+      client.readInputRegister(0, 1, cb1);
+      client.readInputRegister(1, 1, cb2);
+
+      var res1 = Put().word16be(0).word16be(0).word16be(5).word8(1) // header
+	          .word8(4)  	// function code
+ 		  .word8(2)  	// byte count
+  		  .word16be(42) // register 0 value = 42
+		  .buffer();
+
+      var res2 = Put().word16be(1).word16be(0).word16be(5).word8(1) // header
+		  .word8(4)     // function code
+                  .word8(2)     // byte count
+                  .word16be(43) // register 1 value = 43
+                  .buffer();
+
+      onData(res2); // second request finish first
+      onData(res1); // first request finish last
+
+    });
+
     /**
      *  Handle an error response 
      */
