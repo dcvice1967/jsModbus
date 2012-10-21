@@ -1,101 +1,90 @@
 
 var assert = require('assert'),
-    Put = require('put');
+    util = require('util'),
+    Put = require('put'),
+    sinon = require('sinon'),
+    eventEmitter = require('events').EventEmitter,
+    modbusHandler = require('../src/jsModbusHandler');
 
 describe('ModbusServer setup', function () {
 
-  var modbusServer, modbusHandler;
-
+  var modbusServer, serverApiDummy, socketApiDummy;
+   
   beforeEach(function (done) {
+
+    socketApiDummy = {
+      on     : function () { },
+      write  : function () { },
+      pipe   : function () { }
+    };
+
     var dummy = function () { };
 
     modbusServer = require('../src/jsModbusServer');
     modbusServer.setLogger(dummy);
-
-    modbusHandler = require('../src/jsModbusHandler');
-    modbusHandler.setLogger(dummy);
 
     done();
   });
 
   afterEach(function (done) {
 
-    var sName = require.resolve('../src/jsModbusServer'),
-        hName = require.resolve('../src/jsModbusHandler');
+    var sName = require.resolve('../src/jsModbusServer');
 
     delete require.cache[sName];
-    delete require.cache[hName];
     
     done();
   });
 
-  it('should initiate well', function (done) {
-   
-    var counter = 0;
-    var ok = function () {
-      counter += 1;
-      if (counter === 2) done();
-    };
+  it('should initiate well', function () {
 
-    var netMock = {
-      createServer: function () { 
-	ok();
-        return { 
-          on: function () { } ,
-          listen: function (port, host) { 
-	    assert.equal(port, 502); 
-	    assert.equal(host, '127.0.0.1');
-	    ok();
+    var	socketMock = sinon.mock(socketApiDummy);
 
-          }
-        }
-      }
-    };
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('data'), sinon.match.func);
 
-    var server = modbusServer.create(502, '127.0.0.1', netMock);
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('end'), sinon.match.func);
 
-    assert.ok(server);
+    var server = modbusServer.create(socketApiDummy);
+
+    socketMock.verify();
 
   });
 
   describe('handle requests', function () {
 
-    var server, onData, write;
+    var server;
+
+    var SocketApi = function () {
+      eventEmitter.call(this);
+
+      this.write = function () { };
+      this.pipe = function () { };
+    };
+
+   util.inherits(SocketApi, eventEmitter);
+
+   var socket;
 
     beforeEach(function (done) {
-      var onConnect;
-      var eMock = { on: function (evnt, cb) {
-                          if (evnt === 'connection') { onConnect = cb; }
-			  if (evnt === 'data') { onData = cb; }
-      		        },
-		    listen: function () { },
-		    write: function () { },
-		    pipe: function () { } };
 
-      var netMock = {
-	createServer: function (cb) {
-          cb(eMock);
-          return eMock;
-        }
-      }
+      socket = new SocketApi();
 
-      server = modbusServer.create(502, '127.0.0.1', netMock);
-      done(); 
+      server = modbusServer.create(
+	socket,
+	modbusHandler.Server.RequestHandler,
+	modbusHandler.Server.ResponseHandler);
+
+      done();
+ 
     });
 
-    it('should call handler for readCoils', function (done) {
-    
-      var handler = function (startAddress, quantity, response) {
+    it('should call handler for readCoils', function () {
 
-        assert.ok(startAddress);
-	assert.ok(quantity);
-	assert.equal(13, startAddress);
-	assert.equal(1, quantity);
+      var ret = [ true ],
+	  handler = sinon.stub().returns(ret);
 
-        done();
-      };
-
-      server.addHandler(modbusHandler.FC.readCoils, handler);
+      server.addHandler(1, handler);
 
       var req = Put()
 		.word16be(0)   // transaction id   // MBA Header
@@ -108,8 +97,57 @@ describe('ModbusServer setup', function () {
 		.word16be(1)   // quantity
 		.buffer();
 
-      onData(req);
-  
+      var res = Put()
+		.word16be(0)
+		.word16be(0)
+		.word16be(4)
+		.word8(1)
+		.word8(1)
+		.word8(1)
+		.word8(1)
+		.buffer();
+
+      var spy = sinon.spy(socket, "write");
+
+      socket.emit('data', req);
+
+      assert.deepEqual(res, spy.getCall(0).args[0]);
+
+    });
+
+    it('should respond properly', function () {
+      
+      var ret = [13],
+          stub = sinon.stub().returns(ret);
+
+      server.addHandler(4, stub);
+
+      var req = Put()
+		.word16be(0)   // transaction id   // MBA Header
+		.word16be(0)   // protocol version
+   		.word16be(7)   // byte count
+		.word8(1)      // unit id
+  	        .word8(4)      // function code    // PDU
+		.word8(4)      // byte count
+	        .word16be(13)  // start address
+		.word16be(1)   // quantity
+		.buffer();
+
+       var res = Put()
+		.word16be(0)
+		.word16be(0)
+		.word16be(5)
+		.word8(1)
+		.word8(4)
+		.word8(2)
+		.word16be(13)
+		.buffer();
+
+       var spy = sinon.spy(socket, 'write');
+
+       socket.emit('data', req);
+   
+       assert.deepEqual(res, spy.getCall(0).args[0]);
     });
 
 

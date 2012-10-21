@@ -1,9 +1,7 @@
 
 
 var Put = require('put'),
-    net = require('net'),
-    util = require('util'),
-    modbusHandler = require('./jsModbusHandler');
+    util = require('util');
 
 var log = function (msg) { util.log(msg); };
 
@@ -11,43 +9,37 @@ exports.setLogger = function (logger) {
   log = logger;
 };
 
-var ModbusServer = function (port, host, mock) {
-
-  host = !host?'localhost':host;
+var ModbusServer = function (
+	socket, 
+	reqHandler, 
+	resHandler) {
 
   if (!(this instanceof ModbusServer)) {
-    return new ModbusServer(port, host, mock);
+    return new ModbusServer(
+		socket, 
+		reqHandler, 
+		resHandler);
   }
-
-  net = !mock?net:mock;
 
   var that = this;
 
+  this.reqHandler = reqHandler;
+  this.resHandler = resHandler;
 
-  this.server = net.createServer(function (socket) {
-    log('Server created.');
-    that.socket = socket;
-    socket.on('end', that.handleEnd);
-    socket.on('data', that.handleData(that));
-  });
-
-  this.server.on('connection', function (socket) {
-    log('Connection established.');
-  });
-
-  this.server.listen(port, host, function () {
-    var o = that.server.address();
-    log('Listening on ' + o.address + ":" + o.port + ".");
-  });
-
-  this.server.on('data', that.handleData(this));
-
+  // request handler
   this.handler = { };
 
+  // initiate server
+  that.socket = socket;
+  socket.on('end', that.handleEnd(that));
+  socket.on('data', that.handleData(that));
+
   var api = {
+
     addHandler: function (fc, handler) {
       that.handler[fc] = handler;
     }
+
   };
 
   return api;
@@ -56,40 +48,68 @@ var ModbusServer = function (port, host, mock) {
 
 var proto = ModbusServer.prototype;
 
-
 proto.handleData = function (that) {
 
   return function (data) {
 
-    var mbap = {
-	transactionId: data.readUInt16BE(0),
-	protocolVersion: data.readUInt16BE(2),
-	byteCount: data.readUInt16BE(4),
-	clientUnit: data.readUInt8(5)
-    }
+    var mbap = data.slice(0, 7);
+    var pduLength = mbap.readUInt16BE(4) - 1;
+    var pdu = data.slice(7, 7 + pduLength);
 
     // erase mbap from the data stream
-    data = data.slice(7, data.length);
+    // data = data.slice(7, data.length);
 
     // get fc and byteCount in advance
-    var fc = data.readUInt8(0);
-    var byteCount = data.readUInt8(1);
-
-    // cut pdu out of the data stream
-    var pdu = data.slice(0, byteCount + 2);
+    var fc = pdu.readUInt8(0);
+    var byteCount = pdu.readUInt8(1);
 
     // get the pdu handler
-    var handler = modbusHandler.RequestHandler[fc];
-
-    if (!handler) {
+    var reqHandler = that.reqHandler[fc];
+    var callback = that.handler[fc];
+    var resHandler = that.resHandler[fc];
+  
+    if (!reqHandler || !callback || !resHandler) {
       // replace that with an appropriate modbus error
       throw "Not implemented"; 
     }
-    handler(pdu, that.handler[fc]);
+   
+    var params = reqHandler(pdu);
+    var resObj = callback.apply(null, params);
+    var resPdu = resHandler(resObj);
 
+    // add mbdaHeader to resPdu and send it
+    // with write
+
+    var pkt = Put()
+	.word16be(mbap.readUInt16BE(0))
+	.word16be(mbap.readUInt16BE(2))
+	.word16be(resPdu.length + 1)
+	.word8(mbap.readUInt8(6))
+	.put(resPdu)
+	.buffer();
+
+    that.socket.write(pkt);
+    that.socket.pipe(that.socket);
    // that.socket.write("C'est la vie.");
    // that.socket.pipe(that.socket);
   };
+
+};
+
+proto.listen = function (that) {
+
+  return function () {
+    var o = that.server.address();
+    log('Listening on ' + o.address + ":" + o.port + ".");
+  };
+
+};
+
+proto.handleConnection = function (that) {
+
+  return function () {
+    log("Connection established.");
+  }
 
 };
 
@@ -98,7 +118,8 @@ proto.handleError = function (e) {
   console.log(e);
 };
 
-proto.handleEnd = function () { 
+proto.handleEnd = function (that) {
+  return function () {}; 
 };
 
 exports.create = ModbusServer;

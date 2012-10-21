@@ -23,23 +23,62 @@ exports.ExceptionMessage = {
 };
 
 exports.FC = {
-  readCoils: 1
+  readCoils: 1,
+  readInputRegister: 4
 }
 
+exports.Server = { };
+
+// for the server, response handler
+exports.Server.ResponseHandler = {
+  1:  function (register) {
+
+	var len = register.len % 8 > 0 ? Math.floor(register.length / 8) + 1 : Math.floor(register.length / 8);
+
+	var res = Put().word8(1).word8(len);
+
+        // TODO: complete this
+
+        return Put().word8(1).word8(1).word8(1).buffer();
+      },
+  4:  function (register) {
+
+        var res = Put().word8(4).word8(register.length * 2);
+
+	for (var i = 0; i < register.length; i += 1) {
+	  res.word16be(register[i]);
+	}
+
+	return res.buffer();
+  }
+
+};
+
 // for the server
-exports.RequestHandler = {
+exports.Server.RequestHandler = {
 
   // ReadCoils
-  1:  function (pdu, cb) {
+  1:  function (pdu) {
+	var startAddress = pdu.readUInt16BE(2),
+	    quantity = pdu.readUInt16BE(4),
+            param = [ startAddress, quantity ];
+	return param;	
+      },
+
+  // ReadInputRegister
+  4:  function (pdu) {
         var startAddress = pdu.readUInt16BE(2),
-	    quantity = pdu.readUInt16BE(4);
-	cb(startAddress, quantity);	
+	    quantity = pdu.readUInt16BE(4),
+	    param = [ startAddress, quantity ];
+        return param;
       }
   }
 
 
+exports.Client = { };
+
 // for the client
-exports.ResponseHandler = {
+exports.Client.ResponseHandler = {
     // ReadCoils
     1:	function (pdu, cb) {
 
