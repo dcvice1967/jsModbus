@@ -16,22 +16,19 @@ var dummy = function () { },
     modbusProtocolVersion = 0,
     modbusUnitIdentifier = 1;
 
-var ModbusClient = function (port, host, mock) {
+var ModbusClient = function (socket, resHandler) {
 
   if (!(this instanceof ModbusClient)) {
-    return new ModbusClient(port, host, mock);
+    return new ModbusClient(socket, resHandler);
   }
 
   var that = this;
-
-  // connect to host
-  var mNet = !mock?net:mock;
+  this.resHandler = resHandler;
 
   this.isConnected = false;
-  this.client = mNet.connect(port, host );
+  this.socket = socket;
 
-  log('Connecting to ' + host + ':' + port);
-  this.client.on('connect', function () {
+  this.socket.on('connect', function () {
     // release pipe content if there are any yet
     log('Connection established.');
     that.isConnected = true;
@@ -39,7 +36,7 @@ var ModbusClient = function (port, host, mock) {
   });
 
   // setup data receiver
-  this.client.on('data', this.handleData(this));
+  this.socket.on('data', this.handleData(this));
 
   // package and callback queues
   this.pkgPipe = [];
@@ -85,8 +82,12 @@ var ModbusClient = function (port, host, mock) {
       that.makeRequest(fc, pdu, !cb?dummy:cb);
     },
 
+    flush: function () {
+      that.flush();
+    },
+
     close: function () {
-      that.client.end();
+      that.socket.end();
     }
   };
 
@@ -127,7 +128,7 @@ proto.flush = function () {
     var mbap = pkgObj.pkg;
 
     log('sending data');
-    this.client.write(mbap);
+    this.socket.write(mbap);
   }
 }
 
@@ -138,10 +139,11 @@ proto.flush = function () {
 proto.buildPackage = function (pdu) {
   
   var newId = this.identifier++ % 0xFFFF;
+
   var pkgObj = {
 	id : newId,
 	pkg : Put()
-    	.word16be(this.identifier)
+    	.word16be(newId)
     	.word16be(this.modbusProtocolVersion)
     	.word16be(pdu.length + 1)
     	.word8(modbusUnitIdentifier)
@@ -177,37 +179,41 @@ proto.handleData = function (that) {
 
       // 1. extract mbap
 
-      var mbap = { 
-        transId  : buf.readUInt16BE(0),
-        protoId  : buf.readUInt16BE(2),
-        length   : buf.readUInt16BE(4),
-        unitId   : buf.readUInt8(6) };
+      var header = data.slice(cnt, cnt + 7);
+      cnt += header.length;
 
-      cnt += 7;
+      var mbap = { 
+        transId  : header.readUInt16BE(0),
+        protoId  : header.readUInt16BE(2),
+        length   : header.readUInt16BE(4),
+        unitId   : header.readUInt8(6) };
 
       log("MBAP extracted");
 
       // 2. extract pdu
-      buf = buf.slice(0, 7 + mbap.length - 1);
-      cnt += mbap.length - 1;
 
-      var pdu = buf.slice(7, 7 + mbap.length - 1);
+      var pdu = buf.slice(cnt, cnt + mbap.length - 1);
+      cnt += pdu.length;
       log("PDU extracted");
 
       // 3. dequeue callback and make the call with the pdu
+
       var cbObj = that.cbPipe[mbap.transId];
+
       that.cbPipe[mbap.transId] = null;
       log("Fetched Callback Object from pipe with id " + cbObj.id);
 
       // 4. check pdu for errors
+
       log("Checking pdu for errors");
       if (that.handleErrorPDU(pdu, cbObj.cb)) {
         continue;
       }      
 
       // 5. handle pdu
+
       log("Calling Callback with pdu.");
-      var handler = Handler.ResponseHandler[cbObj.fc];
+      var handler = that.resHandler[cbObj.fc];
       if (!handler) { 
 	throw "No handler implemented.";
       }

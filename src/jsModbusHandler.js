@@ -23,24 +23,43 @@ exports.ExceptionMessage = {
 };
 
 exports.FC = {
-  readCoils: 1,
-  readInputRegister: 4
+  readCoils		: 1,
+  readInputRegister	: 4
 }
 
 exports.Server = { };
 
-// for the server, response handler
+/**
+ *  Server response handler. Put new function call
+ *  responses in here. The parameters for the function
+ *  are defined by the handle that has been delivered to 
+ *  the server objects addHandler function.
+ */
 exports.Server.ResponseHandler = {
+  // read coils
   1:  function (register) {
+        var flr = Math.floor(register.length / 8),
+	    len = register.length % 8 > 0 ? flr + 1 : flr,
+	    res = Put().word8(1).word8(len);
 
-	var len = register.len % 8 > 0 ? Math.floor(register.length / 8) + 1 : Math.floor(register.length / 8);
+        var cntr = 0;
+        for (var i = 0; i < len; i += 1 ) {
+	  var cur = 0;
+   	  for (var j = 0; j < 8; j += 1) {
+ 	    var h = 1 << j;
+	    
+	    if (register[cntr]) {
+	      cur += h;
+ 	    }
 
-	var res = Put().word8(1).word8(len);
+	    cntr += 1;
+ 	  }
+	  res.word8(cur);
+   	}
 
-        // TODO: complete this
-
-        return Put().word8(1).word8(1).word8(1).buffer();
+        return res.buffer();
       },
+  // read input register
   4:  function (register) {
 
         var res = Put().word8(4).word8(register.length * 2);
@@ -54,22 +73,33 @@ exports.Server.ResponseHandler = {
 
 };
 
-// for the server
+/**
+ *  The RequestHandler on the server side. The
+ *  functions convert the incoming pdu to a 
+ *  usuable set of parameter that can be handled
+ *  from the server objects user handler (see addHandler 
+ *  function in the servers api).
+ */
 exports.Server.RequestHandler = {
 
   // ReadCoils
   1:  function (pdu) {
-	var startAddress = pdu.readUInt16BE(2),
-	    quantity = pdu.readUInt16BE(4),
+
+	var fc = pdu.readUInt8(0), // never used, should just be an example
+	    startAddress = pdu.readUInt16BE(1),
+	    quantity = pdu.readUInt16BE(3),
             param = [ startAddress, quantity ];
+
 	return param;	
       },
 
   // ReadInputRegister
   4:  function (pdu) {
-        var startAddress = pdu.readUInt16BE(2),
-	    quantity = pdu.readUInt16BE(4),
+
+        var startAddress = pdu.readUInt16BE(1),
+	    quantity = pdu.readUInt16BE(3),
 	    param = [ startAddress, quantity ];
+
         return param;
       }
   }
@@ -77,12 +107,16 @@ exports.Server.RequestHandler = {
 
 exports.Client = { };
 
-// for the client
+/**
+ *  The response handler for the client
+ *  converts the pdu's delivered from the server
+ *  into parameters for the users callback function.
+ */
 exports.Client.ResponseHandler = {
     // ReadCoils
     1:	function (pdu, cb) {
 
-	  log("handing read coils response.");	  
+	  log("handeling read coils response.");	  
 
 	  var fc = pdu.readUInt8(0),
 	      byteCount = pdu.readUInt8(1),

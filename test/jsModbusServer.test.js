@@ -6,10 +6,14 @@ var assert = require('assert'),
     eventEmitter = require('events').EventEmitter,
     modbusHandler = require('../src/jsModbusHandler');
 
-describe('ModbusServer setup', function () {
+describe('Modbus TCP/IP Server', function () {
 
   var modbusServer, serverApiDummy, socketApiDummy;
-   
+
+
+  /**
+   *  Setup socketApiDummy and load modbusServer module
+   */   
   beforeEach(function (done) {
 
     socketApiDummy = {
@@ -26,6 +30,9 @@ describe('ModbusServer setup', function () {
     done();
   });
 
+  /**
+   *  Remove module from cache so that it can be reloaded
+   */
   afterEach(function (done) {
 
     var sName = require.resolve('../src/jsModbusServer');
@@ -35,7 +42,10 @@ describe('ModbusServer setup', function () {
     done();
   });
 
-  it('should initiate well', function () {
+  /**
+   *  Test for socket initialisation 
+   */
+  it('should do the setup', function () {
 
     var	socketMock = sinon.mock(socketApiDummy);
 
@@ -51,10 +61,14 @@ describe('ModbusServer setup', function () {
 
   });
 
-  describe('handle requests', function () {
+  describe('Requests', function () {
 
     var server;
 
+    /**
+     *  SocketApi is a Mock for simulating the socket
+     *  therefor it uses the events.EventEmitter Module
+     */
     var SocketApi = function () {
       eventEmitter.call(this);
 
@@ -62,92 +76,134 @@ describe('ModbusServer setup', function () {
       this.pipe = function () { };
     };
 
-   util.inherits(SocketApi, eventEmitter);
+    util.inherits(SocketApi, eventEmitter);
 
-   var socket;
+    /**
+     *  The SocketApi's instance, gets initiated before
+     *  every test.
+     */
+    var socket;
 
     beforeEach(function (done) {
 
       socket = new SocketApi();
 
       server = modbusServer.create(
-	socket,
-	modbusHandler.Server.RequestHandler,
-	modbusHandler.Server.ResponseHandler);
+        socket,
+        modbusHandler.Server.RequestHandler,
+        modbusHandler.Server.ResponseHandler);
 
       done();
  
     });
 
-    it('should call handler for readCoils', function () {
+    /**
+     *  Make a request through the socket.emit call and
+     *  check what socket.write will be called with
+     */
+    it('should respond to a readCoils function call', function () {
 
-      var ret = [ true ],
-	  handler = sinon.stub().returns(ret);
+      var handler = sinon.stub().returns(
+		[true, false, true, true, false, true, false, true, true, false, true]);
 
       server.addHandler(1, handler);
 
       var req = Put()
-		.word16be(0)   // transaction id   // MBA Header
+		.word16be(0)   // transaction id   // MBPA Header
 		.word16be(0)   // protocol version
-   		.word16be(7)   // byte count
+   		.word16be(6)   // byte count
 		.word8(1)      // unit id
   	        .word8(1)      // function code    // PDU
-		.word8(4)      // byte count
 	        .word16be(13)  // start address
-		.word16be(1)   // quantity
+		.word16be(11)   // quantity
 		.buffer();
 
       var res = Put()
-		.word16be(0)
-		.word16be(0)
-		.word16be(4)
-		.word8(1)
-		.word8(1)
-		.word8(1)
-		.word8(1)
+		.word16be(0)   // transaction id    // MBPA Header
+		.word16be(0)   // protocol vesion
+		.word16be(5)   // byte count
+		.word8(1)      // unit id
+		.word8(1)      // function code     // PDU
+		.word8(2)      // byte count
+		.word8(173)    // 0x10101101 -> reg[13] - reg[20]
+		.word8(5)      // 0x00000101 -> reg[20] - reg[23]
 		.buffer();
 
       var spy = sinon.spy(socket, "write");
 
       socket.emit('data', req);
 
+      assert.ok(handler.called);
+      assert.deepEqual(handler.args[0], [13, 11]);
       assert.deepEqual(res, spy.getCall(0).args[0]);
 
     });
 
-    it('should respond properly', function () {
+    it('should respond to a readInputRegister function call', function () {
       
-      var ret = [13],
-          stub = sinon.stub().returns(ret);
+      var stub = sinon.stub()
+		.withArgs(13, 2)
+		.returns([13, 22]);
 
       server.addHandler(4, stub);
 
       var req = Put()
-		.word16be(0)   // transaction id   // MBA Header
+		.word16be(0)   // transaction id   // MBPA Header
 		.word16be(0)   // protocol version
-   		.word16be(7)   // byte count
+   		.word16be(6)   // byte count
 		.word8(1)      // unit id
   	        .word8(4)      // function code    // PDU
-		.word8(4)      // byte count
 	        .word16be(13)  // start address
-		.word16be(1)   // quantity
+		.word16be(2)   // quantity
 		.buffer();
 
        var res = Put()
-		.word16be(0)
-		.word16be(0)
-		.word16be(5)
-		.word8(1)
-		.word8(4)
-		.word8(2)
-		.word16be(13)
+		.word16be(0)   // transaction id    // MBPA Header
+		.word16be(0)   // protocol version
+		.word16be(7)   // byte count
+		.word8(1)      // unit id
+		.word8(4)      // function code     // PDU
+		.word8(4)      // byte count
+		.word16be(13)  // register[13] = 13
+    		.word16be(22)  // register[14] = 22
 		.buffer();
 
        var spy = sinon.spy(socket, 'write');
 
        socket.emit('data', req);
-   
+  
+       assert.ok(stub.called);
+       assert.deepEqual(stub.args[0], [13, 2]); 
        assert.deepEqual(res, spy.getCall(0).args[0]);
+    });
+
+    it('should respond with an error response', function () {
+
+      var req = Put()
+		.word16be(0)   // transaction id    // MBPA Header
+		.word16be(0)   // protocol version
+    		.word16be(6)   // byte count
+		.word8(1)      // unit id
+		.word8(4)      // function code     // PDU
+		.word16be(13)  // start address
+  		.word16be(2)   // quantity
+		.buffer();
+
+       var res = Put()
+		.word16be(0)   // transaction id    // MBPA Header
+		.word16be(0)   // protocol version
+		.word16be(3)   // byte count
+		.word8(1)      // unit id
+		.word8(0x84)   // error code (0x04 + 0x80)
+		.word8(0x01)   // expection code (illegal function)
+		.buffer();
+
+        var spy = sinon.spy(socket, 'write');
+
+	socket.emit('data', req);
+	
+	assert.deepEqual(res, spy.getCall(0).args[0]);
+
     });
 
 

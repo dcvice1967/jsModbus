@@ -1,19 +1,27 @@
 
-var assert = require("assert");
-var Put = require('put');
+var assert = require("assert"),
+    Put = require('put'),
+    sinon = require('sinon'),
+    util = require('util'),
+    eventEmitter = require('events').EventEmitter;
 
-describe("ModbusClient setup", function () {
+describe("Modbus TCP/IP Client", function () {
 
-  var modbusClient;
+  var modbusClient, modbusHandler, socketApiDummy;
 
   beforeEach(function (done) {
+
+    socketApiDummy = {
+      on : function () { }
+    };
 
     var dummy = function () { };
 
     modbusClient = require('../src/jsModbusClient');
-    // shut down the logger
-    modbusClient.setLogger(dummy);    
-    require('../src/jsModbusHandler').setLogger(dummy);
+    modbusClient.setLogger(dummy);  // shut down the logger
+    
+    modbusHandler = require('../src/jsModbusHandler');
+    modbusHandler.setLogger(dummy); // shut down the logger
 
     done();
 
@@ -21,53 +29,64 @@ describe("ModbusClient setup", function () {
 
   afterEach(function (done) {
 
-    var name = require.resolve('..');
-    delete require.cache[name]; 
+    var cName = require.resolve('../src/jsModbusClient'),
+        hName = require.resolve('../src/jsModbusHandler');
+    
+    delete require.cache[cName];
+    delete require.cache[hName];
+ 
     done();
 
   });
 
-  it("should initiate", function (done) {
+  it("should do the setup", function () {
 
-    var netMock = {
-      connect: function(port, host, cb) {
+    var socketMock = sinon.mock(socketApiDummy);
 
-        assert.equal(port, 502);
-        assert.equal(host, '127.0.0.1');
-        done();
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('connect'), sinon.match.func);
 
-        return { on: function () { } };
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('data'), sinon.match.func);
 
-      }
-    };
-
-    var client = modbusClient.create(502, '127.0.0.1', netMock);
+    var client = modbusClient.create(socketApiDummy);
 
     assert.ok(client);
+
+    socketMock.verify();
+
   });
 
   /**
    *  The actual requests are tested here
    */
 
-  describe('Making requests', function () {
+  describe('Requests', function () {
 
-    var client, onData;
+    var client;
+
+    var SocketApi = function () {
+      eventEmitter.call(this);
+
+      this.write = function () { };
+    };
+
+    util.inherits(SocketApi, eventEmitter);
+
+    /**
+     *  The SocketApi's instance, gets initiated before each
+     *  test.
+     */
+    var socket;
 
     beforeEach(function (done) {
-      var onConnect;
-      var eMock = { on: function (evnt, cb) {
-        if (evnt === 'connect') { onConnect = cb; }
-        if (evnt === 'data') { onData = cb; }
-      }};
 
-      var netMock = { 
-        connect: function () {
-          return eMock;
-        }
-      };
+      socket = new SocketApi();
 
-      client = modbusClient.create(502, '127.0.0.1', netMock);
+      client = modbusClient.create(
+	socket, 
+	modbusHandler.Client.ResponseHandler);
+
       done();
     });
 
@@ -75,13 +94,9 @@ describe("ModbusClient setup", function () {
      *  Simply read input registers with success
      */
 
-    it("should read input register just fine", function (done) {
+    it("should read input register just fine", function () {
 
-      var cb = function (resp) {
-        assert.deepEqual(resp, { fc: 4, byteCount: 2, register: [ 42 ]});
-
-        done();
-      };
+      var cb = sinon.spy();
 
       client.readInputRegister(0, 1, cb);
 
@@ -95,32 +110,19 @@ describe("ModbusClient setup", function () {
 		.word16be(42)  // register 0 value
 		.buffer();
 
-      onData(res);
+      socket.emit('data', res);
+
+      assert.ok(cb.called);
+      assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [42]});
 
     });
 
-    it('should handle responses coming in different order just fine', function (done) {
+    it('should handle responses coming in different order just fine', function () {
 
-      var cb1 = function (resp, err) {
+      var cb = sinon.spy();
 
-        // first request
-
-        assert.ok(resp);
-	assert.deepEqual(resp, { fc: 4, byteCount: 2, register: [ 42 ]});
-
-        done();
-      },
-      cb2 = function (resp, err) {
-
-        assert.ok(resp);
-	assert.deepEqual(resp, { fc: 4, byteCount: 2, register: [43] });	
-
-        // second request
-        
-      };
-
-      client.readInputRegister(0, 1, cb1);
-      client.readInputRegister(1, 1, cb2);
+      client.readInputRegister(0, 1, cb);
+      client.readInputRegister(1, 1, cb);
 
       var res1 = Put().word16be(0).word16be(0).word16be(5).word8(1) // header
 	          .word8(4)  	// function code
@@ -134,26 +136,50 @@ describe("ModbusClient setup", function () {
                   .word16be(43) // register 1 value = 43
                   .buffer();
 
-      onData(res2); // second request finish first
-      onData(res1); // first request finish last
+      socket.emit('data', res2); // second request finish first
+      socket.emit('data', res1); // first request finish last
+
+      assert.ok(cb.calledTwice);
+      assert.deepEqual(cb.args[1][0], { fc: 4, byteCount: 2, register: [ 42 ]});
+      assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [ 43 ]});	
+
 
     });
+
+
+    it('should handle two responses coming in at once', function () {
+
+      var cb = sinon.spy();
+
+      client.readInputRegister(0, 1, cb);
+      client.readInputRegister(1, 1, cb);
+
+      var res = Put().word16be(0).word16be(0).word16be(5).word8(1) // header packet 1
+	          .word8(4)  	// function code
+ 		  .word8(2)  	// byte count
+  		  .word16be(42) // register 0 value = 42
+		  .word16be(1).word16be(0).word16be(5).word8(1) // header packet 2
+		  .word8(4)     // function code
+                  .word8(2)     // byte count
+                  .word16be(43) // register 1 value = 43
+                  .buffer();
+
+      socket.emit('data', res); // first request finish last
+
+      assert.ok(cb.calledTwice);
+      assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [ 42 ]});
+      assert.deepEqual(cb.args[1][0], { fc: 4, byteCount: 2, register: [ 43 ]});	
+
+    });
+
 
     /**
      *  Handle an error response 
      */
 
-    it("should handle an error while reading input register", function (done) {
+    it("should handle an error while reading input register", function () {
 
-      var cb = function (resp, err) {
-	assert.equal(resp, null);
-        assert.ok(err);
-        assert.deepEqual(err, { 
-		errorCode: 0x84, 
-		exceptionCode: 1, 
-		message: 'ILLEGAL FUNCTION' });
-        done();
-      };
+      var cb = sinon.spy();
 
       client.readInputRegister(0, 1, cb);
 
@@ -162,23 +188,21 @@ describe("ModbusClient setup", function () {
 	         .word8(1)     // exception code
 		 .buffer();
 
-      onData(res);
+      socket.emit('data', res);
+
+      assert.ok(cb.calledOnce);
+      assert.equal(cb.args[0][0], null);
+      assert.deepEqual(cb.args[0][1], { 
+	errorCode: 0x84, 
+	exceptionCode: 1, 
+	message: 'ILLEGAL FUNCTION' });
+
 
     });
 
-    it('should handle a read coil request', function (done) {
+    it('should handle a read coil request', function () {
 
-      var cb = function (resp, err) {
-        assert.ok(resp);
-        assert.deepEqual(resp, {
-		fc: 1, 
-		byteCount: 3, 
-		coils: [true, false, true, false, true, false, true, false, 
-			true, false, true, false, true, false, true, false,
-			true, false, false, false, false, false, false, false]
-		});
-        done();
-      };
+      var cb = sinon.spy();
 
       client.readCoils(0, 17, cb);
 
@@ -190,23 +214,22 @@ describe("ModbusClient setup", function () {
 		.word8(1)  // bit 16      = 00000001 = 1
 		.buffer();
 
-      onData(res);
+      socket.emit('data', res);
+
+      assert.ok(cb.calledOnce);
+      assert.deepEqual(cb.args[0][0], {
+	fc: 1, 
+	byteCount: 3, 
+	coils: [true, false, true, false, true, false, true, false, 
+		true, false, true, false, true, false, true, false,
+		true, false, false, false, false, false, false, false]
+	});
 
     });
 
-    it('should handle a write single coil request with value false', function (done) {
+    it('should handle a write single coil request with value false', function () {
 
-      var cb = function (resp, err) {
-        assert.ok(resp);
-	assert.deepEqual(resp, {
-	  fc: 5,
-	  byteCount: 4,
-	  outputAddress: 13,
-	  outputValue: false
-        });
-
-	done();
-      }
+      var cb = sinon.spy();
 
       client.writeSingleCoil(13, false, cb);
 
@@ -217,23 +240,22 @@ describe("ModbusClient setup", function () {
 	        .word16be(0)  // off
 		.buffer();
 
-       onData(res);
+       socket.emit('data', res);
+
+       assert.ok(cb.calledOnce);
+       assert.deepEqual(cb.args[0][0], {
+		fc: 5,
+		byteCount: 4,
+		outputAddress: 13,
+	 	outputValue: false
+       });
+
 
     });
 
-    it('should handle a write single coil request with value true', function (done) {
+    it('should handle a write single coil request with value true', function () {
 
-      var cb = function (resp, err) {
-        assert.ok(resp);
-	assert.deepEqual(resp, {
-	  fc: 5,
-	  byteCount: 4,
-	  outputAddress: 15,
-	  outputValue: true
-        });
-
-	done();
-      };
+      var cb = sinon.spy();
 
       client.writeSingleCoil(15, true, cb);
 
@@ -244,21 +266,22 @@ describe("ModbusClient setup", function () {
 		.word16be(0xFF00) // on 
 		.buffer();
 
-      onData(res);
+      socket.emit('data', res);
+	
+      assert.ok(cb.calledOnce);
+      assert.deepEqual(cb.args[0][0], {
+	  fc: 5,
+	  byteCount: 4,
+	  outputAddress: 15,
+	  outputValue: true
+      });
+
+
     });
 
-    it('should handle a write single register request', function (done) {
+    it('should handle a write single register request', function () {
 
-      var cb = function (resp, err) {
-        assert.ok(resp);
-  	assert.deepEqual(resp, {
-          fc: 6,
-	  byteCount: 4,
-          registerAddress: 13,
-	  registerValue: 42
-        });
-        done();
-      };
+      var cb = sinon.spy();
 
       client.writeSingleRegister(13, 42, cb);
 
@@ -269,7 +292,16 @@ describe("ModbusClient setup", function () {
 	   	 .word16be(42)  // register value
 		 .buffer();
 
-       onData(res);
+       socket.emit('data', res);
+
+       assert.ok(cb.calledOnce);
+       assert.deepEqual(cb.args[0][0], {
+          fc: 6,
+	  byteCount: 4,
+          registerAddress: 13,
+	  registerValue: 42
+       });
+
 
     });
 
