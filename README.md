@@ -7,14 +7,14 @@ selfexplaining API.
 Installation
 ------------
 
-Simply 'git clone' this repository into your project. jsModbus depends on put ('npm install put');
+Simply `git clone` this repository into your project. jsModbus depends on put (`npm install put`);
 
 Testing
 -------
 
-The test files are implemented using [mocha](https://github.com/visionmedia/mocha).
+The test files are implemented using [mocha](https://github.com/visionmedia/mocha) and sinon.
 
-Simply 'npm install -g mocha' and to run the tests type from the root folder 'mocha test/*.test.js'.
+Simply `npm install -g mocha` and `npm install -g sinon`. To run the tests type from the projects root folder `mocha test/*`.
 
 Please feel free to fork and add your own tests.
 
@@ -41,7 +41,35 @@ Client example
 
   	client.writeSingleRegister(13, 42, function (resp, err) {
 	  // resp will look like { fc: 6, byteCount: 4, registerAddress: 13, registerValue: 42 }
-        });
+	});
+
+Server example
+--------------
+
+	var jsModbus = require('./jsModbus');
+
+	// create readInputRegister handler
+	var rirHandler = function (start, quantity) {
+	  var resp[];
+	  for (var i = start; i < start + quant; i += 1) {
+	    resp.push(i);
+	  }
+
+	  return resp;
+	};
+
+	// create Modbus TCP Server
+	jsModbus.createServer(8888, '127.0.0.1', function (modbusServer) {
+	  // addHandler
+	  server.addHandler(4, rirHandler);
+	});
+
+Development
+-----------
+
+To add other function codes on the client side see the test/jsModbusClient.test.js and add a new test. To implement the test create an api call in src/jsModbusClient.js and implement the pdu handler for the client in src/jsModbusHandler.js. That is mainly all.
+
+On the server side all you need to do is to implement the handler for the request and the response in the `exports.Server.RequestHandler` and `exports.Server.ResponseHandler`. Don't forget to test!
 
 That's it for now. Feel free to fork and implement more.
 

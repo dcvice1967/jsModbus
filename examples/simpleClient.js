@@ -13,7 +13,7 @@ var closeClient = function () {
   if (cntr === 3) {
     client.close();
   }
-}
+};
 
 
 client.readInputRegister (0, 8, 
