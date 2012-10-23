@@ -3,11 +3,12 @@ var assert = require("assert"),
     Put = require('put'),
     sinon = require('sinon'),
     util = require('util'),
-    eventEmitter = require('events').EventEmitter;
+    eventEmitter = require('events').EventEmitter,
+    tcpModbusClient = require('../src/jsModbusTCPHeader');
 
 describe("Modbus TCP/IP Client", function () {
 
-  var modbusClient, modbusHandler, socketApiDummy;
+  var modbusClient, tcpModbusClient, modbusHandler, socketApiDummy;
 
   beforeEach(function (done) {
 
@@ -23,6 +24,9 @@ describe("Modbus TCP/IP Client", function () {
     modbusHandler = require('../src/jsModbusHandler');
     modbusHandler.setLogger(dummy); // shut down the logger
 
+    tcpModbusClient = require('../src/jsModbusTCPHeader');
+    tcpModbusClient.setLogger(dummy);
+
     done();
 
   });
@@ -30,7 +34,8 @@ describe("Modbus TCP/IP Client", function () {
   afterEach(function (done) {
 
     var cName = require.resolve('../src/jsModbusClient'),
-        hName = require.resolve('../src/jsModbusHandler');
+        hName = require.resolve('../src/jsModbusHandler'),
+	tName = require.resolve('../src/jsModbusTCPHeader');
     
     delete require.cache[cName];
     delete require.cache[hName];
@@ -49,7 +54,8 @@ describe("Modbus TCP/IP Client", function () {
     socketMock.expects('on').once()
 	.withArgs(sinon.match('data'), sinon.match.func);
 
-    var client = modbusClient.create(socketApiDummy);
+    var tcpClient = tcpModbusClient.create(socketApiDummy);
+    var client = modbusClient.create(tcpClient);
 
     assert.ok(client);
 
@@ -63,7 +69,7 @@ describe("Modbus TCP/IP Client", function () {
 
   describe('Requests', function () {
 
-    var client;
+    var client, tcpHeader;
 
     var SocketApi = function () {
       eventEmitter.call(this);
@@ -83,8 +89,10 @@ describe("Modbus TCP/IP Client", function () {
 
       socket = new SocketApi();
 
+      tcpHeader = tcpModbusClient.create(socket);
+
       client = modbusClient.create(
-	socket, 
+	tcpHeader, 
 	modbusHandler.Client.ResponseHandler);
 
       done();
@@ -101,6 +109,10 @@ describe("Modbus TCP/IP Client", function () {
       client.readInputRegister(0, 1, cb);
 
       var res = Put()
+                .word16be(0)   // transaction id
+		.word16be(0)   // protocol id
+		.word16be(5)   // length 
+		.word8(1)      // unit id
 		.word8(4)      // function code
 		.word8(2)      // byte count
 		.word16be(42)  // register 0 value
@@ -120,13 +132,13 @@ describe("Modbus TCP/IP Client", function () {
       client.readInputRegister(0, 1, cb);
       client.readInputRegister(1, 1, cb);
 
-      var res1 = Put()
+      var res1 = Put().word16be(0).word16be(0).word16be(5).word8(1) // header
 	          .word8(4)  	// function code
  		  .word8(2)  	// byte count
   		  .word16be(42) // register 0 value = 42
 		  .buffer();
 
-      var res2 = Put()
+      var res2 = Put().word16be(1).word16be(0).word16be(5).word8(1) // header
 		  .word8(4)     // function code
                   .word8(2)     // byte count
                   .word16be(43) // register 1 value = 43
@@ -150,19 +162,17 @@ describe("Modbus TCP/IP Client", function () {
       client.readInputRegister(0, 1, cb);
       client.readInputRegister(1, 1, cb);
 
-      var res1 = Put() // packet 1
+      var res = Put().word16be(0).word16be(0).word16be(5).word8(1) // header packet 1
 	          .word8(4)  	// function code
  		  .word8(2)  	// byte count
   		  .word16be(42) // register 0 value = 42
-                  .buffer();
-       var res2 = Put()
+		  .word16be(1).word16be(0).word16be(5).word8(1) // header packet 2
 		  .word8(4)     // function code
                   .word8(2)     // byte count
                   .word16be(43) // register 1 value = 43
                   .buffer();
 
-      socket.emit('data', res1); 
-      socket.emit('data', res2);
+      socket.emit('data', res); // first request finish last
 
       assert.ok(cb.calledTwice);
       assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [ 42 ]});
@@ -181,7 +191,7 @@ describe("Modbus TCP/IP Client", function () {
 
       client.readInputRegister(0, 1, cb);
 
-      var res = Put()
+      var res = Put().word16be(0).word16be(0).word16be(3).word8(1) // header
 		 .word8(0x84)  // error code
 	         .word8(1)     // exception code
 		 .buffer();
@@ -204,7 +214,7 @@ describe("Modbus TCP/IP Client", function () {
 
       client.readCoils(0, 17, cb);
 
-      var res = Put()
+      var res = Put().word16be(0).word16be(0).word16be(6).word8(1) // header
 		.word8(1)  // function code
 		.word8(3)  // byte count
 		.word8(85) // bits 0 - 7  = 01010101 = 85
@@ -231,7 +241,7 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleCoil(13, false, cb);
 
-      var res = Put()
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1) // header
 		.word8(5)     // function code
 		.word8(4)     // byte count
 		.word16be(13) // output address
@@ -257,7 +267,7 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleCoil(15, true, cb);
 
-      var res = Put()
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)  // header
 		.word8(5)         // function code
 		.word8(4)         // byte count
 		.word16be(15)     // output address
@@ -283,7 +293,7 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleRegister(13, 42, cb);
 
-      var res = Put()
+      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)   // header
   		 .word8(6)      // function code
                  .word8(4)      // byte count
         	 .word16be(13)  // register address

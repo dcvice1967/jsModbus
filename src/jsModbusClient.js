@@ -1,8 +1,7 @@
 
 
-var net = require('net');
-var util = require('util');
-var Put = require('put');
+var util = require('util'),
+    Put = require('put');
 
 var Handler = require('./jsModbusHandler');
 
@@ -40,7 +39,7 @@ var ModbusClient = function (socket, resHandler) {
 
   // package and callback queues
   this.pkgPipe = [];
-  this.cbPipe = { };
+  this.cbPipe = [];
 
   this.identifier = 0;
 
@@ -103,11 +102,10 @@ var proto = ModbusClient.prototype;
  */
 proto.makeRequest = function (fc, pdu, cb) {
 
-  var pkgObj = this.buildPackage(pdu),
-      cbObj = { id: pkgObj.id, fc: fc, cb: cb };
+  var cbObj = { fc: fc, cb: cb };
 
-  this.pkgPipe.push(pkgObj);
-  this.cbPipe[pkgObj.id] = cbObj;
+  this.pkgPipe.push(pdu);
+  this.cbPipe.push(cbObj);
 
   this.flush();
 
@@ -124,36 +122,13 @@ proto.flush = function () {
   }
 
   while (this.pkgPipe.length > 0) {
-    var pkgObj = this.pkgPipe.shift();
-    var mbap = pkgObj.pkg;
+    var pdu = this.pkgPipe.shift();
 
     log('sending data');
-    this.socket.write(mbap);
+    this.socket.write(pdu);
   }
 }
 
-/**
- *  Builds an MBAP Package with respect to the
- *  pdu. Very straightforward.
- */
-proto.buildPackage = function (pdu) {
-  
-  var newId = this.identifier++ % 0xFFFF;
-
-  var pkgObj = {
-	id : newId,
-	pkg : Put()
-    	.word16be(newId)
-    	.word16be(this.modbusProtocolVersion)
-    	.word16be(pdu.length + 1)
-    	.word8(modbusUnitIdentifier)
-    	.put(pdu)
-    	.buffer()
-  };
-
-  return pkgObj;
-
-}
 
 /**
  *  Returns the main response handler
@@ -168,57 +143,33 @@ proto.handleData = function (that) {
    *  definitivly a place where errors can occure due to wrong
    *  assigned callbacks, keep that in mind.)
    */
-  return function (data) {
+  return function (pdu) {
 
     log('received data');
 
-    var buf = new Buffer(data);
-    var cnt = 0;
+    // 1. dequeue callback and make the call with the pdu
 
-    while (cnt < buf.length) {
+    var cbObj = that.cbPipe.shift();
 
-      // 1. extract mbap
+    //that.cbPipe[mbap.transId] = null;
+    log("Fetched Callback Object from pipe with id " + cbObj.id);
 
-      var header = data.slice(cnt, cnt + 7);
-      cnt += header.length;
+    // 2. check pdu for errors
 
-      var mbap = { 
-        transId  : header.readUInt16BE(0),
-        protoId  : header.readUInt16BE(2),
-        length   : header.readUInt16BE(4),
-        unitId   : header.readUInt8(6) };
+    log("Checking pdu for errors");
+    if (that.handleErrorPDU(pdu, cbObj.cb)) {
+      return;
+    }      
 
-      log("MBAP extracted");
+    // 3. handle pdu
 
-      // 2. extract pdu
-
-      var pdu = buf.slice(cnt, cnt + mbap.length - 1);
-      cnt += pdu.length;
-      log("PDU extracted");
-
-      // 3. dequeue callback and make the call with the pdu
-
-      var cbObj = that.cbPipe[mbap.transId];
-
-      that.cbPipe[mbap.transId] = null;
-      log("Fetched Callback Object from pipe with id " + cbObj.id);
-
-      // 4. check pdu for errors
-
-      log("Checking pdu for errors");
-      if (that.handleErrorPDU(pdu, cbObj.cb)) {
-        continue;
-      }      
-
-      // 5. handle pdu
-
-      log("Calling Callback with pdu.");
-      var handler = that.resHandler[cbObj.fc];
-      if (!handler) { 
-	throw "No handler implemented.";
-      }
-      handler(pdu, cbObj.cb);
+    log("Calling Callback with pdu.");
+    var handler = that.resHandler[cbObj.fc];
+    if (!handler) { 
+      throw "No handler implemented.";
     }
+    handler(pdu, cbObj.cb);
+    
   }
 
 }

@@ -2,7 +2,8 @@
 var net = require('net'),
     modbusHandler = require('./jsModbusHandler'),
     serverModule = require('./jsModbusServer'),
-    clientModule = require('./jsModbusClient');
+    clientModule = require('./jsModbusClient'),
+    tcpClientModule = require('./jsModbusTCPHeader');
 
 exports.setLogger = function (logger) {
   modbusHandler.setLogger(logger);
@@ -34,12 +35,13 @@ var errorHandler = function (e) {
 
 exports.createClient = function (port, host) {
 
-  var socket = net.connect(port, host);
+  var socket = net.connect(port, host),
+      modbusTCP = tcpClientModule.create(socket);
 
   socket.on('error', errorHandler);
 
   var client = clientModule.create(
-			socket,
+			modbusTCP,
 			modbusHandler.Client.ResponseHandler);
 
   return client;
