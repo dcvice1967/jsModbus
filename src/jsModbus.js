@@ -33,7 +33,7 @@ var errorHandler = function (e) {
 };
 
 
-exports.createClient = function (port, host) {
+exports.createTCPClient = function (port, host) {
 
   var socket = net.connect(port, host),
       modbusTCP = tcpClientModule.create(socket);
