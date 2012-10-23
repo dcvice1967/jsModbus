@@ -12,6 +12,12 @@ exports.setLogger = function (logger) {
 var PROTOCOL_VERSION = 0,
     UNIT_ID = 1;
 
+/**
+ *  ModbusTCPClient handles the MBAP that is the
+ *  additional header used for modbus tcp protocol.
+ *  It get's initialised with a simple socket providing
+ *  .on, .emit and .write methods
+ */
 var ModbusTCPClient = function (socket) {
 
   if (!(this instanceof ModbusTCPClient)) {
@@ -20,27 +26,29 @@ var ModbusTCPClient = function (socket) {
 
   EventEmitter.call(this);
 
+  // listen for data and connection
   this._socket = socket;
   this._socket.on('data', this._handleData(this));
   this._socket.on('connect', this._handleConnection(this));
 
-  this.mbapFifo = [];
+  // store the requests in this fifo and 
+  // flush them later
   this.reqFifo = [];
   this.reqId = 0; 
 
+  // create a modbus tcp packet with mbap and pdu
+  // and attach the packet to the packet pipe.
   this.write = function (pdu) {
 
-    var mbap = this.mbapFifo.shift();
-
     var pkt = Put()
-	.word16be(this.reqId++)
-	.word16be(PROTOCOL_VERSION)
-	.word16be(pdu.length + 1)
-	.word8(UNIT_ID)
-	.put(pdu)
+	.word16be(this.reqId++)      // transaction id
+	.word16be(PROTOCOL_VERSION)  // protocol version
+	.word16be(pdu.length + 1)    // pdu length
+	.word8(UNIT_ID)              // unit id
+	.put(pdu)                    // the actual pdu
 	.buffer();
 
-    this.reqFifo.push(pkt);
+    this.reqFifo.push(pkt);          // pipe the packet
     this._flush();
   };
 
@@ -48,6 +56,7 @@ var ModbusTCPClient = function (socket) {
     this._flush();
   };
 
+  // end the connection
   this.end = function () {
     this._socket.end();
   };
@@ -58,6 +67,11 @@ Util.inherits(ModbusTCPClient, EventEmitter);
 
 var proto = ModbusTCPClient.prototype;
 
+/**
+ *  When a connection is established the 'isConnected'
+ *  flag is set and the 'connect' event is emitted to the 
+ *  listener. Finally the piped packets get flushed.
+ */
 proto._handleConnection = function (that) {
   
   return function () {
@@ -67,6 +81,9 @@ proto._handleConnection = function (that) {
   }
 };
 
+/**
+ *  Flush the remainig packets.
+ */
 proto._flush = function () {
   if (!this.isConnected) {
     return;
@@ -78,6 +95,10 @@ proto._flush = function () {
   }
 }
 
+/**
+ *  Handle the incoming data, cut out the mbap
+ *  packet and send the pdu to the listener
+ */
 proto._handleData = function (that) {
 
   return function (data) {
@@ -92,8 +113,6 @@ proto._handleData = function (that) {
 
       var mbap = data.slice(cnt, cnt + 7),
           len = mbap.readUInt16BE(4);
-
-      that.mbapFifo.push(mbap);
 
       cnt += 7;
 
