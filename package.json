@@ -24,7 +24,7 @@
     "test": "mocha test/*"
   },
   "engine": {
-    "node": ">=0.6
+    "node": ">=0.6"
   },
   "licence": "MIT",
   "keywords": [ "client", "server", "serial", "port", "modbus", "tcp" ]
