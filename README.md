@@ -24,7 +24,7 @@ Client example
 	var jsModbus = require('./jsModbus');
 	
 	// create a modbus client
-	var client = jsModbus.createClient(502, '127.0.0.1');
+	var client = jsModbus.createTCPClient(502, '127.0.0.1');
 	
 	// make some calls
 	client.readInputRegister(0, 10, function (resp, err) {
@@ -59,7 +59,7 @@ Server example
 	};
 
 	// create Modbus TCP Server
-	jsModbus.createServer(8888, '127.0.0.1', function (modbusServer) {
+	jsModbus.createTCPServer(8888, '127.0.0.1', function (modbusServer) {
 	  // addHandler
 	  server.addHandler(4, rirHandler);
 	});
@@ -67,7 +67,7 @@ Server example
 Development
 -----------
 
-To add other function codes on the client side see the test/jsModbusClient.test.js and add a new test. To implement the test create an api call in src/jsModbusClient.js and implement the pdu handler for the client in src/jsModbusHandler.js. That is mainly all.
+To add other function codes on the client side see the test/serialClient.test.js and add a new test. To implement the test create an api call in src/serialClient.js and implement the pdu handler for the client in src/handler.js. That is mainly all.
 
 On the server side all you need to do is to implement the handler for the request and the response in the `exports.Server.RequestHandler` and `exports.Server.ResponseHandler`. Don't forget to test!
 
