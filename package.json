@@ -1,2 +1,31 @@
 { "name" : "jsModbus",
-  "main" : "./src/jsModbus.js" }
+  "version" : "0.1.0",
+  "desciption": "Implementation for the Serial/TCP Modbus protocol.",
+  "author": {
+    "name": "Stefan Poeter",
+    "email": "stefan.poeter@gmail.com"
+  },
+  "main" : "./src/jsModbus.js",
+  "repository": { 
+    "type": "git",
+    "url": "git://github.com/StevePo/jsModbus"
+  },
+  "maintainers": [
+    {
+      "name": "Stefan Poeter",
+      "email": "Stefan.Poeter@gmail.com"
+    }
+  ],
+  "dependencies": {
+    "put": "0.0.6",
+    "sinon": "1.5.0"
+  }, 
+  "scripts": {
+    "test": "mocha test/*"
+  },
+  "engine": {
+    "node": ">=0.6
+  },
+  "licence": "MIT",
+  "keywords": [ "client", "server", "serial", "port", "modbus", "tcp" ]
+}
