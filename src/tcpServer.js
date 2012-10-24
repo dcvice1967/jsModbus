@@ -89,6 +89,13 @@ proto._handleData = function (that) {
     var cnt = 0;
 
     while (cnt < data.length) {
+
+      // 0. check package
+
+      if (data.length < 7) {
+        log('Package is too small, stop processing.');
+        return;
+      }
  
       // 1. extract mbap
 
@@ -104,7 +111,12 @@ proto._handleData = function (that) {
 
       log('MBAP extracted');
 
-      // 2. extract pdu
+      // 2. extract
+
+      if (data.length < cnt + len - 1) {
+        log('PDU is too small, stop processing.');
+        return;
+      } 
 
       var pdu = data.slice(cnt, cnt + len - 1);
     

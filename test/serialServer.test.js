@@ -109,25 +109,17 @@ describe('Modbus TCP/IP Server', function () {
       server.addHandler(1, handler);
 
       var req = Put()
-//		.word16be(0)   // transaction id   // MBPA Header
-//		.word16be(0)   // protocol version
-//   		.word16be(6)   // byte count
-//		.word8(1)      // unit id
-  	        .word8(1)      // function code    // PDU
-	        .word16be(13)  // start address
-		.word16be(11)   // quantity
-		.buffer();
+        .word8(1)      // function code    // PDU
+        .word16be(13)  // start address
+	.word16be(11)   // quantity
+	.buffer();
 
       var res = Put()
-//		.word16be(0)   // transaction id    // MBPA Header
-//		.word16be(0)   // protocol vesion
-//		.word16be(5)   // byte count
-//		.word8(1)      // unit id
-		.word8(1)      // function code     // PDU
-		.word8(2)      // byte count
-		.word8(173)    // 0x10101101 -> reg[13] - reg[20]
-		.word8(5)      // 0x00000101 -> reg[20] - reg[23]
-		.buffer();
+	.word8(1)      // function code     // PDU
+	.word8(2)      // byte count
+	.word8(173)    // 0x10101101 -> reg[13] - reg[20]i
+	.word8(5)      // 0x00000101 -> reg[20] - reg[23]
+	.buffer();
 
       var spy = sinon.spy(socket, "write");
 
@@ -142,31 +134,23 @@ describe('Modbus TCP/IP Server', function () {
     it('should respond to a readInputRegister function call', function () {
       
       var stub = sinon.stub()
-		.withArgs(13, 2)
-		.returns([13, 22]);
+	.withArgs(13, 2)
+	.returns([13, 22]);
 
       server.addHandler(4, stub);
 
       var req = Put()
-//		.word16be(0)   // transaction id   // MBPA Header
-//		.word16be(0)   // protocol version
-//   		.word16be(6)   // byte count
-//		.word8(1)      // unit id
-  	        .word8(4)      // function code    // PDU
-	        .word16be(13)  // start address
-		.word16be(2)   // quantity
-		.buffer();
+        .word8(4)      // function code    // PDU
+        .word16be(13)  // start address
+	.word16be(2)   // quantity
+	.buffer();
 
        var res = Put()
-//		.word16be(0)   // transaction id    // MBPA Header
-//		.word16be(0)   // protocol version
-//		.word16be(7)   // byte count
-//		.word8(1)      // unit id
-		.word8(4)      // function code     // PDU
-		.word8(4)      // byte count
-		.word16be(13)  // register[13] = 13
-    		.word16be(22)  // register[14] = 22
-		.buffer();
+	.word8(4)      // function code     // PDU
+	.word8(4)      // byte count
+	.word16be(13)  // register[13] = 13
+	.word16be(22)  // register[14] = 22
+	.buffer();
 
        var spy = sinon.spy(socket, 'write');
 
@@ -180,29 +164,47 @@ describe('Modbus TCP/IP Server', function () {
     it('should respond with an error response', function () {
 
       var req = Put()
-//		.word16be(0)   // transaction id    // MBPA Header
-//		.word16be(0)   // protocol version
-//    		.word16be(6)   // byte count
-//		.word8(1)      // unit id
-		.word8(4)      // function code     // PDU
-		.word16be(13)  // start address
-  		.word16be(2)   // quantity
-		.buffer();
+	.word8(4)      // function code     // PDU
+	.word16be(13)  // start address
+	.word16be(2)   // quantity
+	.buffer();
 
        var res = Put()
-//		.word16be(0)   // transaction id    // MBPA Header
-//		.word16be(0)   // protocol version
-//		.word16be(3)   // byte count
-//		.word8(1)      // unit id
-		.word8(0x84)   // error code (0x04 + 0x80)
-		.word8(0x01)   // expection code (illegal function)
-		.buffer();
+	.word8(0x84)   // error code (0x04 + 0x80)
+	.word8(0x01)   // expection code (illegal function)
+	.buffer();
 
         var spy = sinon.spy(socket, 'write');
 
 	socket.emit('data', req);
 	
 	assert.deepEqual(res, spy.getCall(0).args[0]);
+
+    });
+
+    it('should respond with an some error response', function () {
+
+      server.addHandler(4, function () { });
+
+      var req = Put()
+	.word8(4)
+	.word16be(13)
+	.word8(2)
+	.buffer();
+
+      var res = Put()
+	.word8(0x84)
+	.word8(0x02)
+	.buffer();
+
+      var handlerSpy = sinon.stub(modbusHandler.Server.RequestHandler, '4'),
+          writeSpy = sinon.spy(socket, 'write');
+
+      handlerSpy.returns({error: 0x02 }); // ILLEGAL DATA ADDRESS
+
+      socket.emit('data', req);
+
+      assert.deepEqual(res, writeSpy.getCall(0).args[0]);
 
     });
 

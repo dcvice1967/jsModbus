@@ -143,6 +143,37 @@ describe('Modbus TCP/IP Server', function () {
 
     });
 
+    it('should disgard a wrong message', function () {
+
+      var onDataSpy = sinon.spy();
+
+      var req = Put().word16be(22).buffer(); // this packet doesn't make sense
+     
+      socket.emit('data', req);
+
+      assert.equal(onDataSpy.callCount, 0);
+
+    });
+
+    it('should disgard a message with a wrong pdu', function () {
+
+      var onDataSpy = sinon.spy();
+
+      var req = Put()
+	.word16be(0)   // MBAP Header Start
+	.word16be(0)
+	.word16be(6)
+	.word8(1)      // MBAP Header End
+	.word16be(22)  // Nonsense
+	.word8be(22)   // Nonsense
+	.buffer();
+
+      socket.emit('data', req);
+
+      assert.equal(onDataSpy.callCount, 0);
+
+    });
+
   });
 
 });

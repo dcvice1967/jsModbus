@@ -3,15 +3,14 @@ var assert = require('assert'),
     util = require('util'),
     Put = require('put'),
     sinon = require('sinon'),
-    eventEmitter = require('events').EventEmitter,
-    modbusHandler = require('../src/handler');
+    eventEmitter = require('events').EventEmitter;
 
 /**
  *  Integration test for the tcp and serial modules
  */
 describe('Modbus TCP/IP Server', function () {
 
-  var serialServer, tcpServer, socketApiDummy;
+  var serialServer, tcpServer, modbusHandler, socketApiDummy;
 
 
   /**
@@ -32,6 +31,9 @@ describe('Modbus TCP/IP Server', function () {
 
     tcpServer = require('../src/tcpServer');
     tcpServer.setLogger(dummy);
+
+    modbusHandler = require('../src/handler');
+    modbusHandler.setLogger(dummy);
 
     done();
   });

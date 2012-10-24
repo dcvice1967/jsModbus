@@ -55,8 +55,6 @@ proto.handleData = function (that) {
 
     log('received data');
 
-    // TODO: check pdu structure 
-
     // get fc and byteCount in advance
     var fc = pdu.readUInt8(0);
     var byteCount = pdu.readUInt8(1);
@@ -72,18 +70,27 @@ proto.handleData = function (that) {
       // socket with error code fc + 0x80 and
       // exception code 0x01 (Illegal Function)
       that.handleException(fc, 0x01);
-
-    } else {
-   
-      var params = reqHandler(pdu);
-      var resObj = callback.apply(null, params);
-      var resPdu = resHandler(resObj);
-
-      // add mbdaHeader to resPdu and send it
-      // with write
-
-      that.socket.write(resPdu);
+      return
     }
+   
+    var params = reqHandler(pdu);
+
+    // if params contains a error attribute then
+    // handle the error
+    if (params && 'error' in params) {
+      log('Request handler returned an error.');
+      that.handleException(fc, params.error);
+      return;
+    }
+
+    var resObj = callback.apply(null, params);
+    var resPdu = resHandler(resObj);
+
+    // add mbdaHeader to resPdu and send it
+    // with write
+
+    that.socket.write(resPdu);
+
   };
 
 };
