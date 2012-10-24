@@ -3,7 +3,7 @@
 var util = require('util'),
     Put = require('put');
 
-var Handler = require('./jsModbusHandler');
+var Handler = require('./handler');
 
 var log = function (msg) { util.log(msg); };
 

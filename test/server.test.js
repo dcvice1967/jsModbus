@@ -4,11 +4,14 @@ var assert = require('assert'),
     Put = require('put'),
     sinon = require('sinon'),
     eventEmitter = require('events').EventEmitter,
-    modbusHandler = require('../src/jsModbusHandler');
+    modbusHandler = require('../src/handler');
 
+/**
+ *  Integration test for the tcp and serial modules
+ */
 describe('Modbus TCP/IP Server', function () {
 
-  var modbusServer, serverApiDummy, socketApiDummy;
+  var serialServer, tcpServer, socketApiDummy;
 
 
   /**
@@ -24,8 +27,11 @@ describe('Modbus TCP/IP Server', function () {
 
     var dummy = function () { };
 
-    modbusServer = require('../src/jsModbusServer');
-    modbusServer.setLogger(dummy);
+    serialServer = require('../src/serialServer');
+    serialServer.setLogger(dummy);
+
+    tcpServer = require('../src/tcpServer');
+    tcpServer.setLogger(dummy);
 
     done();
   });
@@ -35,9 +41,11 @@ describe('Modbus TCP/IP Server', function () {
    */
   afterEach(function (done) {
 
-    var sName = require.resolve('../src/jsModbusServer');
+    var serialName = require.resolve('../src/serialServer'),
+        tcpName = require.resolve('../src/tcpServer');
 
-    delete require.cache[sName];
+    delete require.cache[serialName];
+    delete require.cache[tcpName];
     
     done();
   });
@@ -52,10 +60,11 @@ describe('Modbus TCP/IP Server', function () {
     socketMock.expects('on').once()
 	.withArgs(sinon.match('data'), sinon.match.func);
 
-    socketMock.expects('on').once()
-	.withArgs(sinon.match('end'), sinon.match.func);
+//    socketMock.expects('on').once()
+//	.withArgs(sinon.match('end'), sinon.match.func);
 
-    var server = modbusServer.create(socketApiDummy);
+    var tServer = tcpServer.create(socketApiDummy);
+    var sServer = serialServer.create(tServer);
 
     socketMock.verify();
 
@@ -88,8 +97,10 @@ describe('Modbus TCP/IP Server', function () {
 
       socket = new SocketApi();
 
-      server = modbusServer.create(
-        socket,
+      var tServer = tcpServer.create(socket);
+
+      server = serialServer.create(
+        tServer,
         modbusHandler.Server.RequestHandler,
         modbusHandler.Server.ResponseHandler);
 

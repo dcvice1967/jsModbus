@@ -17,7 +17,7 @@ describe('Modbus TCP/IP Client', function () {
 
     var dummy = function () { };
 
-    modbusClient = require('../src/jsModbusTCPHeader');
+    modbusClient = require('../src/tcpClient');
     modbusClient.setLogger(dummy);
 
     done();
@@ -26,7 +26,7 @@ describe('Modbus TCP/IP Client', function () {
 
   afterEach(function (done) {
 
-    var name = require.resolve('../src/jsModbusTCPHeader');
+    var name = require.resolve('../src/tcpClient');
 
     delete require.cache[name];
 

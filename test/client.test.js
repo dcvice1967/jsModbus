@@ -4,7 +4,7 @@ var assert = require("assert"),
     sinon = require('sinon'),
     util = require('util'),
     eventEmitter = require('events').EventEmitter,
-    tcpModbusClient = require('../src/jsModbusTCPHeader');
+    tcpModbusClient = require('../src/tcpClient');
 
 describe("Modbus TCP/IP Client", function () {
 
@@ -18,13 +18,13 @@ describe("Modbus TCP/IP Client", function () {
 
     var dummy = function () { };
 
-    modbusClient = require('../src/jsModbusClient');
+    modbusClient = require('../src/serialClient');
     modbusClient.setLogger(dummy);  // shut down the logger
     
-    modbusHandler = require('../src/jsModbusHandler');
+    modbusHandler = require('../src/handler');
     modbusHandler.setLogger(dummy); // shut down the logger
 
-    tcpModbusClient = require('../src/jsModbusTCPHeader');
+    tcpModbusClient = require('../src/tcpClient');
     tcpModbusClient.setLogger(dummy);
 
     done();
@@ -33,9 +33,9 @@ describe("Modbus TCP/IP Client", function () {
 
   afterEach(function (done) {
 
-    var cName = require.resolve('../src/jsModbusClient'),
-        hName = require.resolve('../src/jsModbusHandler'),
-	tName = require.resolve('../src/jsModbusTCPHeader');
+    var cName = require.resolve('../src/serialClient'),
+        hName = require.resolve('../src/handler'),
+	tName = require.resolve('../src/tcpClient');
     
     delete require.cache[cName];
     delete require.cache[hName];

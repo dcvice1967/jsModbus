@@ -15,7 +15,7 @@ var readInputRegHandler = function (start, quant) {
 };
 
 
-jsModbus.createServer(502, '127.0.0.1', function (server) {
+jsModbus.createTCPServer(502, '127.0.0.1', function (server) {
 
   server.addHandler(4, readInputRegHandler);
 
