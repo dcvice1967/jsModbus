@@ -184,13 +184,11 @@ exports.Client.ResponseHandler = {
           log("handling write single coil response.");
 
 	  var fc = pdu.readUInt8(0),
-	      byteCount = pdu.readUInt8(1),
-	      outputAddress = pdu.readUInt16BE(2),
-	      outputValue = pdu.readUInt16BE(4);
+	      outputAddress = pdu.readUInt16BE(1),
+	      outputValue = pdu.readUInt16BE(3);
 
 	  var resp = {
 	    fc: fc,
-	    byteCount: byteCount,
 	    outputAddress: outputAddress,
 	    outputValue: outputValue === 0x0000?false:outputValue===0xFF00?true:undefined
  	  };
@@ -201,13 +199,11 @@ exports.Client.ResponseHandler = {
             log("handling write single register response.");
 
             var fc = pdu.readUInt8(0),
-                byteCount = pdu.readUInt8(1),
-		registerAddress = pdu.readUInt16BE(2),
-		registerValue = pdu.readUInt16BE(4);
+		registerAddress = pdu.readUInt16BE(1),
+		registerValue = pdu.readUInt16BE(3);
 
  	    var resp = {
 	      fc: fc,
-	      byteCount: byteCount,
 	      registerAddress: registerAddress,
               registerValue: registerValue
 	    };

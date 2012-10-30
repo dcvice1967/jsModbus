@@ -233,7 +233,6 @@ describe("Modbus Serial Client", function () {
 
       var res = Put()
 		.word8(5)     // function code
-		.word8(4)     // byte count
 		.word16be(13) // output address
 	        .word16be(0)  // off
 		.buffer();
@@ -243,7 +242,6 @@ describe("Modbus Serial Client", function () {
        assert.ok(cb.calledOnce);
        assert.deepEqual(cb.args[0][0], {
 		fc: 5,
-		byteCount: 4,
 		outputAddress: 13,
 	 	outputValue: false
        });
@@ -259,7 +257,6 @@ describe("Modbus Serial Client", function () {
 
       var res = Put()
 		.word8(5)         // function code
-		.word8(4)         // byte count
 		.word16be(15)     // output address
 		.word16be(0xFF00) // on 
 		.buffer();
@@ -269,7 +266,6 @@ describe("Modbus Serial Client", function () {
       assert.ok(cb.calledOnce);
       assert.deepEqual(cb.args[0][0], {
 	  fc: 5,
-	  byteCount: 4,
 	  outputAddress: 15,
 	  outputValue: true
       });
@@ -285,7 +281,6 @@ describe("Modbus Serial Client", function () {
 
       var res = Put()
   		 .word8(6)      // function code
-                 .word8(4)      // byte count
         	 .word16be(13)  // register address
 	   	 .word16be(42)  // register value
 		 .buffer();
@@ -295,7 +290,6 @@ describe("Modbus Serial Client", function () {
        assert.ok(cb.calledOnce);
        assert.deepEqual(cb.args[0][0], {
           fc: 6,
-	  byteCount: 4,
           registerAddress: 13,
 	  registerValue: 42
        });

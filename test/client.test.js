@@ -241,9 +241,8 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleCoil(13, false, cb);
 
-      var res = Put().word16be(0).word16be(0).word16be(7).word8(1) // header
+      var res = Put().word16be(0).word16be(0).word16be(6).word8(1) // header
 		.word8(5)     // function code
-		.word8(4)     // byte count
 		.word16be(13) // output address
 	        .word16be(0)  // off
 		.buffer();
@@ -253,7 +252,6 @@ describe("Modbus TCP/IP Client", function () {
        assert.ok(cb.calledOnce);
        assert.deepEqual(cb.args[0][0], {
 		fc: 5,
-		byteCount: 4,
 		outputAddress: 13,
 	 	outputValue: false
        });
@@ -267,9 +265,8 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleCoil(15, true, cb);
 
-      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)  // header
+      var res = Put().word16be(0).word16be(0).word16be(6).word8(1)  // header
 		.word8(5)         // function code
-		.word8(4)         // byte count
 		.word16be(15)     // output address
 		.word16be(0xFF00) // on 
 		.buffer();
@@ -279,7 +276,6 @@ describe("Modbus TCP/IP Client", function () {
       assert.ok(cb.calledOnce);
       assert.deepEqual(cb.args[0][0], {
 	  fc: 5,
-	  byteCount: 4,
 	  outputAddress: 15,
 	  outputValue: true
       });
@@ -293,9 +289,8 @@ describe("Modbus TCP/IP Client", function () {
 
       client.writeSingleRegister(13, 42, cb);
 
-      var res = Put().word16be(0).word16be(0).word16be(7).word8(1)   // header
+      var res = Put().word16be(0).word16be(0).word16be(6).word8(1)   // header
   		 .word8(6)      // function code
-                 .word8(4)      // byte count
         	 .word16be(13)  // register address
 	   	 .word16be(42)  // register value
 		 .buffer();
@@ -305,7 +300,6 @@ describe("Modbus TCP/IP Client", function () {
        assert.ok(cb.calledOnce);
        assert.deepEqual(cb.args[0][0], {
           fc: 6,
-	  byteCount: 4,
           registerAddress: 13,
 	  registerValue: 42
        });
