@@ -69,6 +69,13 @@ exports.Server.ResponseHandler = {
 	}
 
 	return res.buffer();
+  },
+  5:  function (outputAddress, outputValue) {
+
+        var res = Put().word8(5).word16be(outputAddress)
+		.word16be(outputValue?0xFF00:0x0000).buffer();
+
+        return res;
   }
 
 };
@@ -101,7 +108,16 @@ exports.Server.RequestHandler = {
 	    param = [ startAddress, quantity ];
 
         return param;
-      }
+      },
+  5: function (pdu) {
+      
+       var outputAddress = pdu.readUInt16BE(1),
+	   outputValue = pdu.readUInt16BE(3),
+           boolValue = outputValue===0xFF00?true:outputValue===0x0000?false:undefined,
+   	   param = [ outputAddress, boolValue ];
+
+       return param;
+     }
   }
 
 

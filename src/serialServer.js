@@ -84,7 +84,7 @@ proto.handleData = function (that) {
     }
 
     var resObj = callback.apply(null, params);
-    var resPdu = resHandler(resObj);
+    var resPdu = resHandler.apply(that, resObj);
 
     // add mbdaHeader to resPdu and send it
     // with write

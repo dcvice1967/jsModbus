@@ -104,7 +104,7 @@ describe('Modbus TCP/IP Server', function () {
     it('should respond to a readCoils function call', function () {
 
       var handler = sinon.stub().returns(
-		[true, false, true, true, false, true, false, true, true, false, true]);
+		[[true, false, true, true, false, true, false, true, true, false, true]]);
 
       server.addHandler(1, handler);
 
@@ -135,7 +135,7 @@ describe('Modbus TCP/IP Server', function () {
       
       var stub = sinon.stub()
 	.withArgs(13, 2)
-	.returns([13, 22]);
+	.returns([[13, 22]]);
 
       server.addHandler(4, stub);
 
@@ -205,6 +205,36 @@ describe('Modbus TCP/IP Server', function () {
       socket.emit('data', req);
 
       assert.deepEqual(res, writeSpy.getCall(0).args[0]);
+
+    });
+
+    it('should handle a write single coil request', function () {
+
+      var stub = sinon.stub()
+		.withArgs(10, true)
+		.returns([10, true]);
+
+      server.addHandler(5, stub);
+
+      var req = Put()
+	.word8(5)
+	.word16be(10)
+	.word16be(0xFF00)
+	.buffer();
+
+      var res = Put()
+	.word8(5)
+	.word16be(10)
+	.word16be(0xFF00)
+	.buffer();
+
+      var spy = sinon.spy(socket, 'write');
+
+      socket.emit('data', req);
+
+      assert.ok(stub.called);
+      assert.deepEqual(stub.args[0], [10, true]);
+      assert.deepEqual(res, spy.getCall(0).args[0]); 
 
     });
 

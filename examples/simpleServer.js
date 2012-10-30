@@ -10,7 +10,7 @@ var readInputRegHandler = function (start, quant) {
     resp.push(i);
   }
 
-  return resp;
+  return [resp];
 
 };
 

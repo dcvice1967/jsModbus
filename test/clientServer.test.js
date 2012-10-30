@@ -5,7 +5,7 @@ var assert = require("assert"),
     util = require('util'),
     eventEmitter = require('events').EventEmitter;
 
-describe("Modbus TCP/IP Client", function () {
+describe("Modbus Serial Client", function () {
 
   var modbusClient, modbusHandler, socketApiDummy;
 

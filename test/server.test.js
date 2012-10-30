@@ -117,7 +117,7 @@ describe('Modbus TCP/IP Server', function () {
     it('should respond to a readCoils function call', function () {
 
       var handler = sinon.stub().returns(
-		[true, false, true, true, false, true, false, true, true, false, true]);
+		[[true, false, true, true, false, true, false, true, true, false, true]]);
 
       server.addHandler(1, handler);
 
@@ -156,7 +156,7 @@ describe('Modbus TCP/IP Server', function () {
       
       var stub = sinon.stub()
 		.withArgs(13, 2)
-		.returns([13, 22]);
+		.returns([[13, 22]]);
 
       server.addHandler(4, stub);
 
