@@ -2,7 +2,7 @@
 var Put = require('put');
 var util = require('util');
 
-var log = function (msg) { util.log(msg); }
+var log = function (msg) {  }
 
 exports.setLogger = function (logger) {
   log = logger;
