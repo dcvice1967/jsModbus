@@ -2,7 +2,11 @@
 var net 	       = require('net'),
     handler 	       = require('./handler');
 
+
+var log = function () { };
+
 exports.setLogger = function (logger) {
+  log = logger;
   handler.setLogger(logger);
 };
 
@@ -35,6 +39,9 @@ exports.createTCPClient = function (port, host) {
       tcpClientModule    = require('./tcpClient'),
       serialClientModule = require('./serialClient');
 
+  tcpClientModule.setLogger(log);
+  serialClientModule.setLogger(log);
+
   var socket    = net.connect(port, host),
       tcpClient = tcpClientModule.create(socket);
 
@@ -54,6 +61,9 @@ exports.createTCPServer = function (port, host, cb) {
   var net 	         = require('net'),
       tcpServerModule    = require('./tcpServer'),
       serialServerModule = require('./serialServer');
+
+  tcpServerModule.setLogger(log);
+  serialServerModule.setLogger(log);
 
   var socket = net.createServer().listen(port, host);
 

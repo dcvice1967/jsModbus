@@ -1,5 +1,6 @@
 
-var jsModbus = require('../');
+var jsModbus = require('../'),
+    util = require('util');
 
 jsModbus.setLogger(function (msg) { util.log(msg); });
 
