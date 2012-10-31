@@ -30,6 +30,9 @@ var ModbusTCPClient = function (socket) {
   this._socket = socket;
   this._socket.on('data', this._handleData(this));
   this._socket.on('connect', this._handleConnection(this));
+  this._socket.on('end', this._handleEnd(this));
+  this._socket.on('error', this._handleError(this));
+  this._socket.on('close', this._handleClose(this));
 
   // store the requests in this fifo and 
   // flush them later
@@ -94,6 +97,29 @@ proto._flush = function () {
     this._socket.write(pkt);
   }
 }
+
+proto._handleEnd = function (that) {
+
+  return function () {
+    that.emit("end");
+  }
+
+};
+
+proto._handleError = function (that) {
+
+  return function () {
+    that.emit("error");
+  }
+};
+
+proto._handleClose = function (that) {
+
+  return function () {
+    that.emit('close');
+  }; 
+
+};
 
 /**
  *  Handle the incoming data, cut out the mbap

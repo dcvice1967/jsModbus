@@ -44,6 +44,13 @@ describe('Modbus TCP/IP Client', function () {
     socketMock.expects('on').once()
 	.withArgs(sinon.match('connect'), sinon.match.func);
 
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('end'), sinon.match.func)
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('error'), sinon.match.func);
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('close'), sinon.match.func);
+
     // TODO: handle errors
 
     var client = modbusClient.create(socketApiDummy);

@@ -81,6 +81,10 @@ var ModbusClient = function (socket, resHandler) {
       that.makeRequest(fc, pdu, !cb?dummy:cb);
     },
 
+    on: function (name, cb) {
+      socket.on(name, cb);
+    },
+
     flush: function () {
       that.flush();
     },

@@ -54,12 +54,77 @@ describe("Modbus TCP/IP Client", function () {
     socketMock.expects('on').once()
 	.withArgs(sinon.match('data'), sinon.match.func);
 
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('end'), sinon.match.func);
+
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('error'), sinon.match.func);
+
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('close'), sinon.match.func);
+
+
     var tcpClient = tcpModbusClient.create(socketApiDummy);
     var client = modbusClient.create(tcpClient);
 
     assert.ok(client);
 
     socketMock.verify();
+
+  });
+
+
+  describe('Socket events', function () {
+
+    var client, tcpHeader;
+
+    var SocketApi = function () {
+      eventEmitter.call(this);
+
+      this.write = function () { };
+    };
+
+    util.inherits(SocketApi, eventEmitter);
+
+    /**
+     *  The SocketApi's instance, gets initiated before each
+     *  test.
+     */
+    var socket;
+
+    beforeEach(function (done) {
+
+      socket = new SocketApi();
+
+      tcpHeader = tcpModbusClient.create(socket);
+
+      client = modbusClient.create(
+	tcpHeader, 
+	modbusHandler.Client.ResponseHandler);
+
+      done();
+    });
+
+    it('should report events', function () {
+
+      var endStub = sinon.stub(),
+          errorStub = sinon.stub(),
+	  closeStub = sinon.stub();
+
+      client.on('end', endStub);
+      client.on('error', errorStub);
+      client.on('close', closeStub);
+
+      socket.emit('end');
+      socket.emit('error');
+      socket.emit('close');
+
+      assert.ok(endStub.calledOnce);
+      assert.ok(errorStub.calledOnce);
+      assert.ok(closeStub.calledOnce);
+
+    });
+
 
   });
 

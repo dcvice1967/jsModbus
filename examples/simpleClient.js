@@ -5,7 +5,7 @@ var jsModbus = require('..'),
 // override logger function
 jsModbus.setLogger(function (msg) { util.log(msg); } );
 
-var client = jsModbus.createTCPClient(502, '127.0.0.1');
+var client = jsModbus.createTCPClient(8000, '127.0.0.1');
 
 var cntr = 0;
 var closeClient = function () {
