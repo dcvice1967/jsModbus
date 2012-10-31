@@ -55,13 +55,26 @@ Server example
 	    resp.push(i);
 	  }
 
-	  return resp;
+	  return [resp];
 	};
+
+        var coil = false;
+        var writeCoilHandler = function (addr, value) {
+	  
+ 	  if (addr === 0) {
+	    coil = value;
+	  }
+
+	  return [addr, value];
+
+	};
+
 
 	// create Modbus TCP Server
 	jsModbus.createTCPServer(8888, '127.0.0.1', function (modbusServer) {
 	  // addHandler
 	  server.addHandler(4, rirHandler);
+	  server.addHandler(5, writeCoilHandler);
 	});
 
 Development
