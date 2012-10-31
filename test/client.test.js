@@ -125,6 +125,26 @@ describe("Modbus TCP/IP Client", function () {
 
     });
 
+    it('should report connect/disconnect status', function () {
+
+      socket.emit('connect');
+
+      assert.ok(client.isConnected());
+
+      socket.emit('close');
+
+      assert.ok(!client.isConnected());
+
+      socket.emit('connect');
+
+      assert.ok(client.isConnected());
+
+      socket.emit('end');
+
+      assert.ok(!client.isConnected());
+
+    });
+
 
   });
 

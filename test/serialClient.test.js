@@ -49,6 +49,12 @@ describe("Modbus Serial Client", function () {
     socketMock.expects('on').once()
 	.withArgs(sinon.match('data'), sinon.match.func);
 
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('close'), sinon.match.func);
+
+    socketMock.expects('on').once()
+	.withArgs(sinon.match('end'), sinon.match.func);
+
     var client = modbusClient.create(socketApiDummy);
 
     assert.ok(client);

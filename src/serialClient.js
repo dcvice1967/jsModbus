@@ -36,6 +36,8 @@ var ModbusClient = function (socket, resHandler) {
 
   // setup data receiver
   this.socket.on('data', this.handleData(this));
+  this.socket.on('close', this.handleClose(this));
+  this.socket.on('end', this.handleEnd(this));
 
   // package and callback queues
   this.pkgPipe = [];
@@ -79,6 +81,10 @@ var ModbusClient = function (socket, resHandler) {
           pdu = that.pduWithTwoParameter(fc, address, value);
 
       that.makeRequest(fc, pdu, !cb?dummy:cb);
+    },
+
+    isConnected: function () {
+      return that.isConnected;
     },
 
     on: function (name, cb) {
@@ -221,6 +227,21 @@ proto.pduWithTwoParameter = function (fc, start, quantity) {
 	.word16be(quantity)
 	.buffer();
 }
+
+proto.handleClose = function (that) {
+
+  return function () {
+    that.isConnected = false;
+  }
+};
+
+proto.handleEnd = function (that) {
+
+  return function () {
+    that.isConnected = false;
+  }
+
+};
 
 exports.create = ModbusClient;
 
