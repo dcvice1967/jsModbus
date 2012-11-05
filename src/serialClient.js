@@ -117,7 +117,9 @@ proto.makeRequest = function (fc, pdu, cb) {
   this.pkgPipe.push(pdu);
   this.cbPipe.push(cbObj);
 
-  this.flush();
+  if (this.cbPipe.length === 0) {
+    this.flush();
+  }
 
 }
 
