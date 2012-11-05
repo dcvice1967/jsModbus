@@ -33,6 +33,7 @@ client.readInputRegister (6, 10,
 client.readCoils (0, 10,
 	function (resp, err) { 
 
+        console.log(arguments);
 	  if (err) {
 	    console.log(err);
             closeClient();

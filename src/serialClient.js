@@ -131,11 +131,14 @@ proto.flush = function () {
     return;
   }
 
-  while (this.pkgPipe.length > 0) {
+  var that = this;
+
+  if (this.pkgPipe.length > 0) {
     var pdu = this.pkgPipe.shift();
 
     log('sending data');
-    this.socket.write(pdu);
+    var resp = this.socket.write(pdu);
+
   }
 }
 
@@ -179,6 +182,8 @@ proto.handleData = function (that) {
       throw "No handler implemented.";
     }
     handler(pdu, cbObj.cb);
+
+    that.flush();
     
   }
 
