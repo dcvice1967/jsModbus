@@ -7,30 +7,23 @@ jsModbus.setLogger(function (msg) { util.log(msg); } );
 
 var client = jsModbus.createTCPClient(2000, '192.168.0.1');
 
-var cntr = 0;
-var closeClient = function () {
-  cntr += 1;
-  if (cntr === 5) {
-    client.close();
-  }
-};
 
+var intv = setInterval(function () {
 
-client.readInputRegister (0, 8, 
+  util.log('readInputRegister (0, 1)');
+  client.readInputRegister (0, 1, 
 	function (resp) { 
-  	  console.log('inside the first user cb');
+  	  console.log('value = ' + resp.register[0]);
 	  console.log(resp);
-          closeClient(); 
-	});
+       	});
 
-client.readInputRegister (6, 10, 
+/*  client.readInputRegister (6, 10, 
 	function (resp) { 
 	  console.log('inside the second user cb');
 	  console.log(resp);
-          closeClient(); 
 	});
 
-client.readCoils (0, 2,
+  client.readCoils (0, 2,
 	function (resp, err) { 
 
         console.log(arguments);
@@ -42,9 +35,17 @@ client.readCoils (0, 2,
   
 	  console.log('inside the third user cb');
 	  console.log(resp);
-	  closeClient();
-	});
+	}); */
+}, 500);
 
-client.writeSingleCoil(0, false, closeClient);
-client.writeSingleCoil(1, true, closeClient);
+util.log(intv);
+
+setTimeout(function () {
+  clearInterval(intv);
+}, 10000);
+
+setTimeout(function () {
+  client.writeSingleCoil(0, false);
+  client.writeSingleCoil(1, true);
+}, 5000);
 

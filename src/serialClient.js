@@ -22,6 +22,9 @@ var ModbusClient = function (socket, resHandler) {
   }
 
   var that = this;
+
+  this.state = 'ready'; // ready or waiting (for response)
+
   this.resHandler = resHandler;
 
   this.isConnected = false;
@@ -117,7 +120,7 @@ proto.makeRequest = function (fc, pdu, cb) {
   this.pkgPipe.push(pdu);
   this.cbPipe.push(cbObj);
 
-  if (this.cbPipe.length === 0) {
+  if (this.state === 'ready') {
     this.flush();
   }
 
@@ -140,7 +143,7 @@ proto.flush = function () {
 
     log('sending data');
     var resp = this.socket.write(pdu);
-
+    this.state = "waiting";
   }
 }
 
@@ -185,6 +188,7 @@ proto.handleData = function (that) {
     }
     handler(pdu, cbObj.cb);
 
+    that.state = "ready";
     that.flush();
     
   }
