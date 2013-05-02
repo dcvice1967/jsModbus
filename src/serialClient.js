@@ -176,6 +176,8 @@ proto.handleData = function (that) {
 
     log("Checking pdu for errors");
     if (that.handleErrorPDU(pdu, cbObj.cb)) {
+      that.state = "ready";
+      that.flush();
       return;
     }      
 
