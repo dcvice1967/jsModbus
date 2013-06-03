@@ -1,9 +1,9 @@
 
-var assert = require("assert"),
-    Put = require('put'),
-    sinon = require('sinon'),
-    util = require('util'),
-    eventEmitter = require('events').EventEmitter;
+var assert          = require("assert"),
+    Put             = require('put'),
+    sinon           = require('sinon'),
+    util            = require('util'),
+    eventEmitter    = require('events').EventEmitter;
 
 describe("Modbus Serial Client", function () {
 
@@ -72,9 +72,10 @@ describe("Modbus Serial Client", function () {
     var client;
 
     var SocketApi = function () {
-      eventEmitter.call(this);
+        eventEmitter.call(this);
 
-      this.write = function () { };
+        this.write = function () { };
+    
     };
 
     util.inherits(SocketApi, eventEmitter);
@@ -85,15 +86,16 @@ describe("Modbus Serial Client", function () {
      */
     var socket;
 
-    beforeEach(function (done) {
+    beforeEach(function () {
 
-      socket = new SocketApi();
+        socket = new SocketApi();
 
-      client = modbusClient.create(
-	socket, 
-	modbusHandler.Client.ResponseHandler);
+        client = modbusClient.create(
+            socket, 
+            modbusHandler.Client.ResponseHandler);
 
-      done();
+        socket.emit('connect');
+
     });
 
     /**
@@ -203,6 +205,38 @@ describe("Modbus Serial Client", function () {
 
 
     });
+
+    it('should handle two responses coming in at once where one results in an error', function () {
+
+      var cb = sinon.spy(),
+          writeMock = sinon.mock(socket);
+
+      var res1 = Put()  // packet 1
+	      .word8(0x84) 	// function code
+ 		  .word8(0x02) 	// exception code
+          .buffer(),
+          res2 = Put()
+		  .word8(4)     // function code
+          .word8(2)     // byte count
+          .word16be(43) // register 1 value = 43
+          .buffer();
+
+      writeMock.expects('write').twice();
+
+      client.readInputRegister(0, 1, cb);
+      client.readInputRegister(1, 1, cb);
+
+      socket.emit('data', res1); 
+      socket.emit('data', res2);
+
+      assert.ok(cb.calledTwice);
+      assert.deepEqual(cb.args[0][1], { errorCode: 0x84, exceptionCode: 0x2, message: 'ILLEGAL DATA ADDRESS' });
+      assert.deepEqual(cb.args[1][0], { fc: 4, byteCount: 2, register: [ 43 ]});	
+
+        writeMock.verify();
+
+    });
+
 
     it('should handle a read coil request', function () {
 

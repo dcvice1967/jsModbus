@@ -92,7 +92,7 @@ describe("Modbus TCP/IP Client", function () {
      */
     var socket;
 
-    beforeEach(function (done) {
+    beforeEach(function () {
 
       socket = new SocketApi();
 
@@ -102,7 +102,8 @@ describe("Modbus TCP/IP Client", function () {
 	tcpHeader, 
 	modbusHandler.Client.ResponseHandler);
 
-      done();
+    socket.emit('connect');
+
     });
 
     it('should report events', function () {
@@ -152,90 +153,102 @@ describe("Modbus TCP/IP Client", function () {
    *  The actual requests are tested here
    */
 
-  describe('Requests', function () {
+    describe('Requests', function () {
 
-    var client, tcpHeader;
+        var client, tcpHeader;
 
-    var SocketApi = function () {
-      eventEmitter.call(this);
+        var SocketApi = function () {
+            eventEmitter.call(this);
 
-      this.write = function () { };
-    };
+            this.write = function () { };
+        };
 
-    util.inherits(SocketApi, eventEmitter);
+        util.inherits(SocketApi, eventEmitter);
 
-    /**
-     *  The SocketApi's instance, gets initiated before each
-     *  test.
-     */
-    var socket;
+        /**
+        *  The SocketApi's instance, gets initiated before each
+        *  test.
+        */
+        var socket;
 
-    beforeEach(function (done) {
+        beforeEach(function () {
 
-      socket = new SocketApi();
+            socket = new SocketApi();
 
-      tcpHeader = tcpModbusClient.create(socket);
+            tcpHeader = tcpModbusClient.create(socket);
 
-      client = modbusClient.create(
-	tcpHeader, 
-	modbusHandler.Client.ResponseHandler);
+            client = modbusClient.create(
+	            tcpHeader, 
+	            modbusHandler.Client.ResponseHandler);
 
-      done();
-    });
+            socket.emit('connect');
 
-    /**
-     *  Simply read input registers with success
-     */
+        });
 
-    it("should read input register just fine", function () {
+        /**
+        *  Simply read input registers with success
+        */
 
-      var cb = sinon.spy();
+        it("should read input register just fine", function () {
 
-      client.readInputRegister(0, 1, cb);
+            var cb = sinon.spy();
 
-      var res = Put()
+            client.readInputRegister(0, 1, cb);
+
+            var res = Put()
                 .word16be(0)   // transaction id
-		.word16be(0)   // protocol id
-		.word16be(5)   // length 
-		.word8(1)      // unit id
-		.word8(4)      // function code
-		.word8(2)      // byte count
-		.word16be(42)  // register 0 value
-		.buffer();
+		        .word16be(0)   // protocol id
+		        .word16be(5)   // length 
+		        .word8(1)      // unit id
+		        .word8(4)      // function code
+		        .word8(2)      // byte count
+		        .word16be(42)  // register 0 value
+		        .buffer();
 
-      socket.emit('data', res);
+            socket.emit('data', res);
 
-      assert.ok(cb.called);
-      assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [42]});
+            assert.ok(cb.called);
+            assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [42]});
 
-    });
+        });
 
-    it('should handle responses coming in different order just fine', function () {
+        it('should handle responses coming in different order just fine', function () {
 
-      var cb = sinon.spy();
+            var cb = sinon.spy();
 
-      client.readInputRegister(0, 1, cb);
-      client.readInputRegister(1, 1, cb);
+            client.readInputRegister(0, 1, cb);
+            client.readInputRegister(1, 1, cb);
 
-      var res1 = Put().word16be(0).word16be(0).word16be(5).word8(1) // header
-	          .word8(4)  	// function code
- 		  .word8(2)  	// byte count
-  		  .word16be(42) // register 0 value = 42
-		  .buffer();
+            var res1 = Put()
+                .word16be(0)
+                .word16be(0)
+                .word16be(5)
+                .word8(1)       // header
+	            .word8(4)  	    // function code
+ 		        .word8(2)  	    // byte count
+  		        .word16be(42)   // register 0 value = 42
+		        .buffer();
 
-      var res2 = Put().word16be(1).word16be(0).word16be(5).word8(1) // header
-		  .word8(4)     // function code
-                  .word8(2)     // byte count
-                  .word16be(43) // register 1 value = 43
-                  .buffer();
+            var res2 = Put()
+                .word16be(1)
+                .word16be(0)
+                .word16be(5)
+                .word8(1)       // header
+		        .word8(4)       // function code
+                .word8(2)       // byte count
+                .word16be(43)   // register 1 value = 43
+                .buffer();
 
-      socket.emit('data', res2); // second request finish first
-      socket.emit('data', res1); // first request finish last
+            socket.emit('data', res2); // second request finish first
+            socket.emit('data', res1); // first request finish last
 
-      assert.ok(cb.calledTwice);
-      assert.deepEqual(cb.args[1][0], { fc: 4, byteCount: 2, register: [ 42 ]});
-      assert.deepEqual(cb.args[0][0], { fc: 4, byteCount: 2, register: [ 43 ]});	
-
+            assert.ok(cb.calledTwice);
+            assert.deepEqual(
+                cb.args[1][0], { 
+                    fc: 4, byteCount: 2, register: [ 42 ]});
+            assert.deepEqual(
+                cb.args[0][0], { 
+                    fc: 4, byteCount: 2, register: [ 43 ]});	
 
     });
 

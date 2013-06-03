@@ -43,8 +43,8 @@ var ModbusClient = function (socket, resHandler) {
   this.socket.on('end', this.handleEnd(this));
 
   // package and callback queues
-  this.pkgPipe = [];
-  this.cbPipe = [];
+  this.pipe = [];
+  this.current = null;
 
   this.identifier = 0;
 
@@ -115,10 +115,9 @@ var proto = ModbusClient.prototype;
  */
 proto.makeRequest = function (fc, pdu, cb) {
 
-  var cbObj = { fc: fc, cb: cb };
+  var req = { fc: fc, cb: cb, pdu: pdu };
 
-  this.pkgPipe.push(pdu);
-  this.cbPipe.push(cbObj);
+  this.pipe.push(req);
 
   if (this.state === 'ready') {
     this.flush();
@@ -132,19 +131,20 @@ proto.makeRequest = function (fc, pdu, cb) {
  */
 proto.flush = function () {
 
-  if (!this.isConnected) {
-    return;
-  }
+    if (!this.isConnected) {
+        return;
+    }
 
-  var that = this;
+    if (this.pipe.length > 0 && !this.current) {
 
-  if (this.pkgPipe.length > 0) {
-    var pdu = this.pkgPipe.shift();
+        this.current = this.pipe.shift();
 
-    log('sending data');
-    var resp = this.socket.write(pdu);
-    this.state = "waiting";
-  }
+        log('sending data');
+        this.socket.write(this.current.pdu);
+        this.state = "waiting";
+    
+    }
+
 }
 
 
@@ -163,31 +163,32 @@ proto.handleData = function (that) {
    */
   return function (pdu) {
 
+    if (!that.current) {
+        return;
+    }
+
     log('received data');
 
-    // 1. dequeue callback and make the call with the pdu
-
-    var cbObj = that.cbPipe.shift();
-
-    //that.cbPipe[mbap.transId] = null;
-    log("Fetched Callback Object from pipe with id " + cbObj.id);
-
-    // 2. check pdu for errors
+    // 1. check pdu for errors
 
     log("Checking pdu for errors");
-    if (that.handleErrorPDU(pdu, cbObj.cb)) {
+    if (that.handleErrorPDU(pdu, that.current.cb)) {
+      that.state = "ready";
+      that.current = null;
+      that.flush();
       return;
     }      
 
-    // 3. handle pdu
+    // 2. handle pdu
 
     log("Calling Callback with pdu.");
-    var handler = that.resHandler[cbObj.fc];
+    var handler = that.resHandler[that.current.fc];
     if (!handler) { 
       throw "No handler implemented.";
     }
-    handler(pdu, cbObj.cb);
+    handler(pdu, that.current.cb);
 
+    that.current = null;
     that.state = "ready";
     that.flush();
     
