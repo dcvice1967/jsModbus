@@ -109,7 +109,7 @@ proto._handleEnd = function (that) {
 proto._handleError = function (that) {
 
   return function () {
-    that.emit("error");
+//    that.emit("error");
   }
 };
 
