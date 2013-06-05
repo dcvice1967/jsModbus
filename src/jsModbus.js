@@ -57,7 +57,7 @@ exports.createTCPServer = function (port, host, cb) {
 
   var socket = net.createServer().listen(port, host);
 
-  socket.on('error', errorHandler);
+  socket.on('error', function (e) { cb(e); });
   socket.on('connection', function (s) {
 
     var tcpServer = tcpServerModule.create(s);
@@ -67,7 +67,7 @@ exports.createTCPServer = function (port, host, cb) {
 			handler.Server.RequestHandler,
 			handler.Server.ResponseHandler);
 
-    cb(server);
+    cb(null, server);
 
   });
  
