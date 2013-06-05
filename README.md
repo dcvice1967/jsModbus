@@ -24,15 +24,20 @@ Client example
 	var jsModbus = require('./jsModbus');
 	
 	// create a modbus client
-	var client = jsModbus.createTCPClient(502, '127.0.0.1');
+	var client = jsModbus.createTCPClient(502, '127.0.0.1', function (err) {
+        if (err) {
+            console.log(err);
+            exit(0);
+        }
+    });
 	
 	// make some calls
 	client.readInputRegister(0, 10, function (resp, err) {
-	  // resp will look like { fc: 4, byteCount: 20, regs: [ values 0 - 10 ] }
+	  // resp will look like { fc: 4, byteCount: 20, register: [ values 0 - 10 ] }
 	});
 	
 	client.readCoils(5, 3, function (resp, err) {
-	  // resp will look like { fc: 1, byteCount: 1, regs: [ true, false, true ] }
+	  // resp will look like { fc: 1, byteCount: 1, register: [ true, false, true ] }
 	});
 	
 	client.writeSingleCoil(5, true, function (resp, err) {
@@ -71,7 +76,7 @@ Server example
 
 
 	// create Modbus TCP Server
-	jsModbus.createTCPServer(8888, '127.0.0.1', function (modbusServer) {
+	jsModbus.createTCPServer(8888, '127.0.0.1', function (err, modbusServer) {
 	  // addHandler
 	  server.addHandler(4, rirHandler);
 	  server.addHandler(5, writeCoilHandler);
