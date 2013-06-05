@@ -10,30 +10,7 @@ exports.setLogger = function (logger) {
   handler.setLogger(logger);
 };
 
-var errorHandler = function (e) {
-
-  if (!e) {
-    return;
-  }
-
-  if (e.code === 'EADDRINUSE') {
-    console.log('Address already in use!');
-    return;
-  }
-
-  if (e.code === 'ECONNREFUSED') {
-    console.log('Connection refused!');
-    return;
-  }
-
-  // otherwise
-
-  console.log(e);
-
-};
-
-
-exports.createTCPClient = function (port, host) {
+exports.createTCPClient = function (port, host, cb) {
 
   var net 		 = require('net'),
       tcpClientModule    = require('./tcpClient'),
@@ -45,7 +22,20 @@ exports.createTCPClient = function (port, host) {
   var socket    = net.connect(port, host),
       tcpClient = tcpClientModule.create(socket);
 
-  socket.on('error', errorHandler);
+  socket.on('error', function (e) {
+      if (!cb) {
+          return;
+      }
+      cb(e); 
+          
+  });
+
+  socket.on('connect', function () {
+      if (!cb) {
+          return;
+      }
+      cb();
+  });
 
   var client = serialClientModule.create(
 	tcpClient,
