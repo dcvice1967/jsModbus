@@ -1,5 +1,5 @@
 {
-  "name": "jsModbus",
+  "name": "jsmodbus",
   "version": "0.1.0",
   "desciption": "Implementation for the Serial/TCP Modbus protocol.",
   "author": "Stefan Poeter <stefan.poeter@gmail.com>",
