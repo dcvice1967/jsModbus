@@ -13,8 +13,8 @@
   ],
   "dependencies": {
     "put": "0.0.6"
-  }
-  "devDependencies" {
+  },
+  "devDependencies": {
     "sinon": "1.5.0"
   },
   "scripts": {
