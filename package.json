@@ -1,25 +1,22 @@
-{ "name" : "jsModbus",
-  "version" : "0.1.0",
+{
+  "name": "jsModbus",
+  "version": "0.1.0",
   "desciption": "Implementation for the Serial/TCP Modbus protocol.",
-  "author": {
-    "name": "Stefan Poeter",
-    "email": "stefan.poeter@gmail.com"
-  },
-  "main" : "./src/jsModbus.js",
-  "repository": { 
+  "author": "Stefan Poeter <stefan.poeter@gmail.com>",
+  "main": "./src/jsModbus.js",
+  "repository": {
     "type": "git",
     "url": "git://github.com/StevePo/jsModbus"
   },
   "maintainers": [
-    {
-      "name": "Stefan Poeter",
-      "email": "Stefan.Poeter@gmail.com"
-    }
+    "Stefan Poeter <Stefan.Poeter@gmail.com>"
   ],
   "dependencies": {
-    "put": "0.0.6",
+    "put": "0.0.6"
+  }
+  "devDependencies" {
     "sinon": "1.5.0"
-  }, 
+  },
   "scripts": {
     "test": "mocha test/*"
   },
@@ -27,5 +24,20 @@
     "node": ">=0.6"
   },
   "licence": "MIT",
-  "keywords": [ "client", "server", "serial", "port", "modbus", "tcp" ]
+  "keywords": [
+    "client",
+    "server",
+    "serial",
+    "port",
+    "modbus",
+    "tcp"
+  ],
+  "readmeFilename": "README.md",
+  "gitHead": "95955fb2f83826a60b6f4e1b67ce2bba680ed95e",
+  "description": "jsModbus ========",
+  "directories": {
+    "test": "test",
+    "example": "examples"
+  },
+  "license": "BSD"
 }
