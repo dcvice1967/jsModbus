@@ -1,3 +1,5 @@
+A simple an easy to use Modbus TCP client/server implementation.
+
 jsModbus
 ========
 
