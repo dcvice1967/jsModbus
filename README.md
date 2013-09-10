@@ -7,7 +7,7 @@ selfexplaining API.
 Installation
 ------------
 
-Simply `git clone` this repository into your project. jsModbus depends on put (`npm install put`);
+Since this module is part of npm simply type `npm install jsmodbus` and you are ready to go.
 
 Testing
 -------
