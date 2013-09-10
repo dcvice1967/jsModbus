@@ -23,7 +23,7 @@
   "engine": {
     "node": ">=0.6"
   },
-  "licence": "MIT",
+  "license": "MIT",
   "keywords": [
     "client",
     "server",
