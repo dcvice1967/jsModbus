@@ -1,7 +1,5 @@
-
-
-var util = require('util'),
-    Put = require('put');
+var util    = require('util'),
+    Put     = require('put');
 
 var Handler = require('./handler');
 

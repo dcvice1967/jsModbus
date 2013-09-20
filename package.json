@@ -1,6 +1,6 @@
 {
   "name": "jsmodbus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Implementation for the Serial/TCP Modbus protocol.",
   "author": "Stefan Poeter <stefan.poeter@gmail.com>",
   "main": "./src/jsModbus.js",
@@ -33,8 +33,6 @@
     "tcp"
   ],
   "readmeFilename": "README.md",
-  "gitHead": "95955fb2f83826a60b6f4e1b67ce2bba680ed95e",
-  "description": "jsModbus ========",
   "directories": {
     "test": "test",
     "example": "examples"
